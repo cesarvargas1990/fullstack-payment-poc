@@ -13,9 +13,10 @@ La pantalla inicial muestra **«Hola mundo»** y está preparada para ejecutarse
 
 ## Instalación
 
-Desde esta carpeta:
+Desde la carpeta `frontend`:
 
 ```bash
+cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
 nvm use
 npm install
 cd ios
@@ -25,19 +26,33 @@ cd ..
 
 ## Ejecutar en iOS
 
-Inicia Metro en una terminal:
+Inicia Metro en una terminal desde `frontend`:
 
 ```bash
+cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
 nvm use
 npm start
 ```
 
-En otra terminal, desde esta misma carpeta:
+En otra terminal, ejecuta iOS también desde `frontend`:
 
 ```bash
+cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
 nvm use
 npm run ios
 ```
+
+> `npm run ios` requiere que exista `frontend/ios`. Si todavía no está
+> integrada, genera una plantilla temporal desde la raíz del repositorio (no
+> desde `frontend`):
+>
+> ```bash
+> cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc
+> npx @react-native-community/cli@20.1.0 init CheckoutAppNative --version 0.86.0
+> ```
+>
+> Esto crea `CheckoutAppNative/` junto a `frontend/`; después deben integrarse
+> sus proyectos nativos en `frontend`.
 
 Si Xcode abre una ventana de Metro que usa otra versión de Node, configura Node
 22 como versión predeterminada de NVM:
