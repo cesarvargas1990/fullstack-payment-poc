@@ -1,9 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
 import { Transaction } from '../../domain/transaction.entity';
-import { WompiPaymentGateway } from './wompi-payment.gateway';
+import { ExternalCardPaymentGateway } from './external-card-payment.gateway';
 
-describe('WompiPaymentGateway', () => {
+describe('ExternalCardPaymentGateway', () => {
   const transaction: Transaction = {
     id: 'tx-1',
     productId: 'prod-1',
@@ -27,12 +27,12 @@ describe('WompiPaymentGateway', () => {
   const config = {
     get: jest.fn((key: string) => {
       const values: Record<string, string> = {
-        WOMPI_BASE_URL: 'https://wompi.test/v1',
-        WOMPI_PUBLIC_KEY: 'pub_test_key',
-        WOMPI_PRIVATE_KEY: 'prv_test_key',
-        WOMPI_INTEGRITY_SECRET: 'integrity_secret',
-        WOMPI_POLL_ATTEMPTS: '1',
-        WOMPI_POLL_INTERVAL_MS: '0',
+        PAYMENT_PROVIDER_BASE_URL: 'https://external.test/v1',
+        PAYMENT_PROVIDER_PUBLIC_KEY: 'pub_test_key',
+        PAYMENT_PROVIDER_PRIVATE_KEY: 'prv_test_key',
+        PAYMENT_PROVIDER_INTEGRITY_SECRET: 'integrity_secret',
+        PAYMENT_PROVIDER_POLL_ATTEMPTS: '1',
+        PAYMENT_PROVIDER_POLL_INTERVAL_MS: '0',
       };
 
       return values[key];
@@ -57,12 +57,12 @@ describe('WompiPaymentGateway', () => {
           },
         }),
       )
-      .mockResolvedValueOnce(jsonResponse({ data: { id: 'wompi-tx-1' } }))
+      .mockResolvedValueOnce(jsonResponse({ data: { id: 'external-tx-1' } }))
       .mockResolvedValueOnce(
-        jsonResponse({ data: { id: 'wompi-tx-1', status: 'APPROVED' } }),
+        jsonResponse({ data: { id: 'external-tx-1', status: 'APPROVED' } }),
       );
 
-    const result = await new WompiPaymentGateway(config).pay(transaction, paymentData);
+    const result = await new ExternalCardPaymentGateway(config).pay(transaction, paymentData);
 
     const expectedReference = 'checkout-tx-1';
     const expectedSignature = createHash('sha256')
@@ -72,12 +72,12 @@ describe('WompiPaymentGateway', () => {
     expect(result).toEqual({
       approved: true,
       status: 'APPROVED',
-      providerReference: 'wompi-tx-1',
+      providerReference: 'checkout-tx-1',
       failureReason: undefined,
     });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      'https://wompi.test/v1/tokens/cards',
+      'https://external.test/v1/tokens/cards',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ Authorization: 'Bearer pub_test_key' }),
@@ -113,23 +113,23 @@ describe('WompiPaymentGateway', () => {
           },
         }),
       )
-      .mockResolvedValueOnce(jsonResponse({ data: { id: 'wompi-tx-1' } }))
+      .mockResolvedValueOnce(jsonResponse({ data: { id: 'external-tx-1' } }))
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            id: 'wompi-tx-1',
+            id: 'external-tx-1',
             status: 'DECLINED',
             status_message: 'Insufficient funds',
           },
         }),
       );
 
-    const result = await new WompiPaymentGateway(config).pay(transaction, paymentData);
+    const result = await new ExternalCardPaymentGateway(config).pay(transaction, paymentData);
 
     expect(result).toEqual({
       approved: false,
       status: 'DECLINED',
-      providerReference: 'wompi-tx-1',
+      providerReference: 'checkout-tx-1',
       failureReason: 'Insufficient funds',
     });
   });
@@ -140,8 +140,8 @@ describe('WompiPaymentGateway', () => {
     } as unknown as ConfigService;
 
     await expect(
-      new WompiPaymentGateway(incompleteConfig).pay(transaction, paymentData),
-    ).rejects.toThrow('Missing Wompi configuration');
+      new ExternalCardPaymentGateway(incompleteConfig).pay(transaction, paymentData),
+    ).rejects.toThrow('Missing payment provider configuration');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

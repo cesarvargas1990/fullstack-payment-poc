@@ -37,11 +37,21 @@ export class PayTransactionUseCase {
       status,
       providerReference: payment.providerReference,
       failureReason: payment.failureReason,
-      updatedAt: new Date(),
+      statusChangedAt: payment.statusChangedAt ?? new Date(),
+      updatedAt: payment.statusChangedAt ?? new Date(),
     };
 
     if (status === 'APPROVED') {
-      await this.products.decreaseStock(transaction.productId, transaction.quantity);
+      const items = transaction.items ?? [
+        {
+          productId: transaction.productId,
+          quantity: transaction.quantity,
+        },
+      ];
+
+      for (const item of items) {
+        await this.products.decreaseStock(item.productId, item.quantity);
+      }
     }
 
     return this.transactions.update(nextTransaction);

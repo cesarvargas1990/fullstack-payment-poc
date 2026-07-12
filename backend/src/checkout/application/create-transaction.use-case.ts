@@ -8,8 +8,12 @@ import {
 import { Transaction } from '../domain/transaction.entity';
 
 export type CreateTransactionCommand = {
-  productId: string;
-  quantity: number;
+  productId?: string;
+  quantity?: number;
+  items?: Array<{
+    productId: string;
+    quantity: number;
+  }>;
   customerEmail: string;
 };
 
@@ -23,23 +27,50 @@ export class CreateTransactionUseCase {
   ) {}
 
   async execute(command: CreateTransactionCommand): Promise<Transaction> {
-    const product = await this.products.findById(command.productId);
+    const requestedItems =
+      command.items && command.items.length > 0
+        ? command.items
+        : command.productId && command.quantity
+          ? [{productId: command.productId, quantity: command.quantity}]
+          : [];
 
-    if (!product) {
-      throw new NotFoundException('Product not found');
+    if (requestedItems.length === 0) {
+      throw new BadRequestException('At least one product is required');
     }
 
-    if (command.quantity > product.stock) {
-      throw new BadRequestException('Insufficient stock');
+    const transactionItems: Transaction['items'] = [];
+    let amountInCents = 0;
+    let currency: 'COP' = 'COP';
+
+    for (const item of requestedItems) {
+      const product = await this.products.findById(item.productId);
+
+      if (!product) {
+        throw new NotFoundException('Product not found');
+      }
+
+      if (item.quantity > product.stock) {
+        throw new BadRequestException('Insufficient stock');
+      }
+
+      currency = product.currency;
+      const itemAmount = product.priceInCents * item.quantity;
+      amountInCents += itemAmount;
+      transactionItems.push({
+        productId: product.id,
+        quantity: item.quantity,
+        amountInCents: itemAmount,
+      });
     }
 
     const now = new Date();
     const transaction: Transaction = {
       id: randomUUID(),
-      productId: product.id,
-      quantity: command.quantity,
-      amountInCents: product.priceInCents * command.quantity,
-      currency: product.currency,
+      productId: transactionItems[0].productId,
+      quantity: transactionItems.reduce((total, item) => total + item.quantity, 0),
+      items: transactionItems,
+      amountInCents,
+      currency,
       status: 'PENDING',
       customerEmail: command.customerEmail,
       createdAt: now,

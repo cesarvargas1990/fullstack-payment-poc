@@ -54,11 +54,13 @@ export class MysqlProvider implements OnModuleInit, OnModuleDestroy {
         id VARCHAR(36) PRIMARY KEY,
         product_id VARCHAR(36) NOT NULL,
         quantity INT NOT NULL,
+        items_json JSON NULL,
         amount_in_cents INT NOT NULL,
         currency CHAR(3) NOT NULL,
         status VARCHAR(20) NOT NULL,
         provider_reference VARCHAR(120) NULL,
         failure_reason VARCHAR(255) NULL,
+        status_changed_at TIMESTAMP NULL,
         customer_email VARCHAR(160) NOT NULL,
         created_at TIMESTAMP NOT NULL,
         updated_at TIMESTAMP NOT NULL,
@@ -71,8 +73,10 @@ export class MysqlProvider implements OnModuleInit, OnModuleDestroy {
   }
 
   private async ensureTransactionProviderColumns() {
+    await this.ensureColumn('transactions', 'items_json', 'JSON NULL AFTER quantity');
     await this.ensureColumn('transactions', 'provider_reference', 'VARCHAR(120) NULL');
     await this.ensureColumn('transactions', 'failure_reason', 'VARCHAR(255) NULL');
+    await this.ensureColumn('transactions', 'status_changed_at', 'TIMESTAMP NULL');
   }
 
   private async seed() {

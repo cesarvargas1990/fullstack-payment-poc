@@ -28,14 +28,16 @@ import {
 } from '../application/productsSlice';
 import {formatCardNumber, validateCardForm} from '../domain/cardValidation';
 import {Product} from '../domain/Product';
-import {payCart} from '../infrastructure/checkoutApi';
+import {CheckoutTransactionResult, payCart} from '../infrastructure/checkoutApi';
 
 export function ProductCatalogScreen() {
   const [activeView, setActiveView] = useState<
-    'products' | 'cart' | 'payment' | 'summary'
+    'products' | 'cart' | 'payment' | 'summary' | 'result'
   >('products');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [paymentResults, setPaymentResults] = useState<CheckoutTransactionResult[]>([]);
+  const [paidTotalInCents, setPaidTotalInCents] = useState(0);
   const [cardForm, setCardForm] = useState({
     cardNumber: '',
     cardHolder: '',
@@ -95,8 +97,13 @@ export function ProductCatalogScreen() {
   };
 
   const handleReviewPayment = () => {
-    if (!cardValidation.isValid || cardForm.cardHolder.trim().length < 2) {
+    if (!cardValidation.isValid) {
       showToast('Completa los datos validos de la tarjeta.');
+      return;
+    }
+
+    if (cardForm.cardHolder.trim().length < 5) {
+      showToast('El nombre del titular debe tener minimo 5 caracteres.');
       return;
     }
 
@@ -124,36 +131,62 @@ export function ProductCatalogScreen() {
     try {
       const transactions = await payCart(cartItems, {
         ...cardForm,
+        cardHolder: cardForm.cardHolder.trim(),
         customerEmail: cardForm.customerEmail.trim(),
       });
+      setPaymentResults(transactions);
+      setPaidTotalInCents(cartTotalInCents);
       const hasDeclined = transactions.some(
-        transaction => transaction.status !== 'APPROVED',
+        transaction => transaction.paidTransaction.status !== 'APPROVED',
       );
 
       if (hasDeclined) {
         showToast('El pago fue rechazado. Revisa los datos e intenta de nuevo.');
+        setActiveView('result');
+        dispatch(clearCart());
         return;
       }
 
       console.log('[payment-success]', {
-        transactionIds: transactions.map(transaction => transaction.id),
+        transactionIds: transactions.map(
+          transaction => transaction.paidTransaction.id,
+        ),
+        references: transactions.map(
+          transaction => transaction.paidTransaction.providerReference,
+        ),
         totalInCents: cartTotalInCents,
         items: cartItemCount,
       });
+      setActiveView('result');
       dispatch(clearCart());
-      setActiveView('products');
-      showToast('Pago aprobado. Transaccion completada.');
     } catch (paymentError) {
+      const message =
+        paymentError instanceof Error
+          ? paymentError.message
+          : 'Unknown payment error';
       console.log('[payment-error]', {
-        message:
-          paymentError instanceof Error
-            ? paymentError.message
-            : 'Unknown payment error',
+        message,
       });
-      showToast('No fue posible completar el pago.');
+      showToast(message);
     } finally {
       setIsPaying(false);
     }
+  };
+
+  const handleStartNewFlow = () => {
+    dispatch(clearCart());
+    setPaymentResults([]);
+    setPaidTotalInCents(0);
+    setCardForm({
+      cardNumber: '',
+      cardHolder: '',
+      customerEmail: '',
+      expMonth: '',
+      expYear: '',
+      cvc: '',
+    });
+    setActiveView('products');
+    dispatch(loadProducts());
   };
 
   return (
@@ -180,14 +213,18 @@ export function ProductCatalogScreen() {
                   ? 'Carrito'
                   : activeView === 'payment'
                     ? 'Pago con tarjeta'
-                    : 'Resumen del pago'}
+                    : activeView === 'summary'
+                      ? 'Resumen del pago'
+                      : 'Estado final'}
             </Text>
             <Text style={styles.sectionMeta}>
               {activeView === 'products'
                 ? `${products.length} disponibles`
                 : activeView === 'cart'
                   ? `${cartItemCount} articulos agregados`
-                  : formatMoney(cartTotalInCents, 'COP')}
+                  : activeView === 'result'
+                    ? `${paymentResults[0]?.items.length ?? 0} producto(s) pagado(s)`
+                    : formatMoney(cartTotalInCents, 'COP')}
             </Text>
           </View>
           <Pressable
@@ -205,7 +242,7 @@ export function ProductCatalogScreen() {
               </View>
             </View>
             <Text style={styles.cartShortcutText}>
-              {activeView === 'products' ? 'Carro' : 'Productos'}
+              {activeView === 'products' ? 'Carrito' : 'Productos'}
             </Text>
             {cartItemCount > 0 ? (
               <View style={styles.cartBadge}>
@@ -446,7 +483,6 @@ export function ProductCatalogScreen() {
                         Ingresa una tarjeta Visa o Mastercard valida.
                       </Text>
                     ) : null}
-
                     <Text style={styles.inputLabel}>Nombre del titular</Text>
                     <TextInput
                       accessibilityLabel="Nombre del titular"
@@ -459,6 +495,12 @@ export function ProductCatalogScreen() {
                       style={styles.input}
                       value={cardForm.cardHolder}
                     />
+                    {cardForm.cardHolder.length > 0 &&
+                    cardForm.cardHolder.trim().length < 5 ? (
+                      <Text accessibilityRole="alert" style={styles.inputError}>
+                        El nombre del titular debe tener minimo 5 caracteres.
+                      </Text>
+                    ) : null}
 
                     <Text style={styles.inputLabel}>Correo del comprador</Text>
                     <TextInput
@@ -575,7 +617,7 @@ export function ProductCatalogScreen() {
                     {formatMoney(cartTotalInCents, 'COP')}
                   </Text>
                   <Text style={styles.paymentSummaryMeta}>
-                    Se creara una transaccion PENDING y luego se procesara el pago.
+                    Revisa el total y confirma para procesar tu pago de forma segura.
                   </Text>
                 </View>
               }
@@ -616,11 +658,127 @@ export function ProductCatalogScreen() {
           </>
         ) : null}
 
+        {status === 'succeeded' && activeView === 'result' ? (
+          <>
+            <FlatList
+              data={paymentResults[0]?.items ?? []}
+              keyExtractor={item => item.product.id}
+              contentContainerStyle={styles.paymentContent}
+              ListHeaderComponent={
+                <View
+                  style={[
+                    styles.transactionResultCard,
+                    paymentResults[0]?.paidTransaction.status === 'APPROVED'
+                      ? styles.transactionResultApproved
+                      : styles.transactionResultFailed,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.transactionResultIcon,
+                      paymentResults[0]?.paidTransaction.status === 'APPROVED'
+                        ? null
+                        : styles.transactionResultIconFailed,
+                    ]}>
+                    {paymentResults[0]?.paidTransaction.status === 'APPROVED'
+                      ? '✓'
+                      : '!'}
+                  </Text>
+                  <Text style={styles.transactionResultTitle}>
+                    {paymentResults[0]?.paidTransaction.status === 'APPROVED'
+                      ? 'Pago aprobado correctamente'
+                      : 'Pago no completado'}
+                  </Text>
+                  <Text style={styles.transactionResultMeta}>
+                    Total: {formatMoney(paidTotalInCents, 'COP')}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.transactionResultHelp,
+                      paymentResults[0]?.paidTransaction.status === 'APPROVED'
+                        ? null
+                        : styles.transactionResultHelpFailed,
+                    ]}>
+                    Estado: {formatTransactionStatus(paymentResults[0]?.paidTransaction.status)}
+                  </Text>
+                  {paymentResults[0]?.paidTransaction.providerReference ? (
+                    <Text
+                      style={[
+                        styles.transactionResultHelp,
+                        paymentResults[0]?.paidTransaction.status === 'APPROVED'
+                          ? null
+                          : styles.transactionResultHelpFailed,
+                      ]}>
+                      Referencia: {paymentResults[0].paidTransaction.providerReference}
+                    </Text>
+                  ) : null}
+                  <Text
+                    style={[
+                      styles.transactionResultHelp,
+                      paymentResults[0]?.paidTransaction.status === 'APPROVED'
+                        ? null
+                        : styles.transactionResultHelpFailed,
+                    ]}>
+                    Fecha:{' '}
+                    {paymentResults[0]?.paidTransaction.statusChangedAt
+                      ? formatDateTime(paymentResults[0].paidTransaction.statusChangedAt)
+                      : paymentResults[0]?.paidTransaction.updatedAt
+                        ? formatDateTime(paymentResults[0].paidTransaction.updatedAt)
+                        : '-'}
+                  </Text>
+                  {paymentResults[0]?.paidTransaction.status !== 'APPROVED' ? (
+                    <Text style={[styles.transactionResultHelp, styles.transactionResultHelpFailed]}>
+                      No se pudo confirmar el pago. Revisa los datos e intenta de nuevo.
+                    </Text>
+                  ) : null}
+                </View>
+              }
+              renderItem={({item}) => (
+                <View style={styles.transactionDetailCard}>
+                  <Text style={styles.summaryItemName}>{item.product.name}</Text>
+                  <Text style={styles.summaryItemMeta}>
+                    Cantidad: {item.quantity} ·{' '}
+                    {formatMoney(
+                      item.product.priceInCents * item.quantity,
+                      item.product.currency,
+                    )}
+                  </Text>
+                </View>
+              )}
+            />
+
+            <View style={styles.checkoutBar}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleStartNewFlow}
+                style={({pressed}) => [
+                  styles.payButton,
+                  styles.confirmPaymentButton,
+                  pressed ? styles.payButtonPressed : null,
+                ]}>
+                <Text style={styles.payButtonText}>Volver al inicio</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : null}
+
         {toastMessage ? (
           <View style={styles.toast}>
             <Text accessibilityRole="alert" style={styles.toastText}>
               {toastMessage}
             </Text>
+          </View>
+        ) : null}
+
+        {isPaying ? (
+          <View accessibilityRole="progressbar" style={styles.processingOverlay}>
+            <View style={styles.processingCard}>
+              <ActivityIndicator color="#0f3b66" size="large" />
+              <Text style={styles.processingTitle}>Procesando pago</Text>
+              <Text style={styles.processingText}>
+                Estamos creando la transaccion y esperando la confirmacion del
+                proveedor de pagos. Esto puede tardar unos segundos.
+              </Text>
+            </View>
           </View>
         ) : null}
       </View>
@@ -652,11 +810,19 @@ function ProductItem({
         styles.productCard,
         hasItems ? styles.productCardSelected : null,
       ]}>
-      <Image
-        accessibilityIgnoresInvertColors
-        source={{uri: product.imageUrl}}
-        style={styles.productImage}
-      />
+      {product.imageUrl ? (
+        <Image
+          accessibilityIgnoresInvertColors
+          source={{uri: product.imageUrl}}
+          style={styles.productImage}
+        />
+      ) : (
+        <View style={[styles.productImage, styles.productImageFallback]}>
+          <Text style={styles.productImageFallbackText}>
+            {product.name.slice(0, 1)}
+          </Text>
+        </View>
+      )}
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{product.name}</Text>
         <Text style={styles.productDescription}>{product.description}</Text>
@@ -748,6 +914,39 @@ function updateCardNumberGroup(cardNumber: string, index: number, value: string)
   groups[index] = value.replace(/\D/g, '').slice(0, 4);
 
   return formatCardNumber(groups.join(''));
+}
+
+function formatTransactionStatus(status?: string) {
+  if (status === 'APPROVED') {
+    return 'Aprobado';
+  }
+
+  if (status === 'DECLINED') {
+    return 'Rechazado';
+  }
+
+  if (status === 'PENDING') {
+    return 'Pendiente';
+  }
+
+  if (status === 'ERROR') {
+    return 'Error';
+  }
+
+  return 'No disponible';
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString('es-CO', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 }
 
 const styles = StyleSheet.create({
@@ -951,6 +1150,15 @@ const styles = StyleSheet.create({
     height: 72,
     width: 72,
   },
+  productImageFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productImageFallbackText: {
+    color: '#0f3b66',
+    fontSize: 24,
+    fontWeight: '800',
+  },
   productCardSelected: {
     borderColor: '#0f3b66',
     borderWidth: 2,
@@ -1078,6 +1286,104 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 13,
     marginTop: 4,
+  },
+  transactionResultCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 18,
+  },
+  transactionResultApproved: {
+    backgroundColor: '#ecfdf3',
+    borderColor: '#12b76a',
+  },
+  transactionResultFailed: {
+    backgroundColor: '#fff1f3',
+    borderColor: '#f04438',
+  },
+  transactionResultIcon: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#12b76a',
+    borderRadius: 18,
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '900',
+    height: 36,
+    lineHeight: 36,
+    textAlign: 'center',
+    width: 36,
+  },
+  transactionResultIconFailed: {
+    backgroundColor: '#f04438',
+  },
+  transactionResultTitle: {
+    color: '#027a48',
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 12,
+  },
+  transactionResultMeta: {
+    color: '#064e3b',
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  transactionResultHelp: {
+    color: '#047857',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 8,
+  },
+  transactionResultHelpFailed: {
+    color: '#b42318',
+  },
+  transactionDetailCard: {
+    backgroundColor: '#ffffff',
+    borderColor: '#dbe7ef',
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 12,
+    padding: 14,
+  },
+  transactionStatusRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  transactionStatusLabel: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  pendingBadge: {
+    backgroundColor: '#fef3c7',
+    borderRadius: 999,
+    color: '#92400e',
+    fontSize: 12,
+    fontWeight: '800',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  finalStatusBadge: {
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: '800',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  approvedBadge: {
+    backgroundColor: '#dcfce7',
+    color: '#166534',
+  },
+  failedBadge: {
+    backgroundColor: '#fee2e2',
+    color: '#991b1b',
+  },
+  transactionDetailText: {
+    color: '#334155',
+    fontSize: 12,
+    marginTop: 8,
   },
   cardForm: {
     marginTop: 18,
@@ -1278,6 +1584,42 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  processingOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.38)',
+    bottom: 0,
+    justifyContent: 'center',
+    left: 0,
+    padding: 24,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 20,
+  },
+  processingCard: {
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderColor: '#dbe7ef',
+    borderRadius: 14,
+    borderWidth: 1,
+    maxWidth: 340,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+  },
+  processingTitle: {
+    color: '#0f3b66',
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 14,
+    textAlign: 'center',
+  },
+  processingText: {
+    color: '#475569',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
     textAlign: 'center',
   },
 });

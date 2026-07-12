@@ -8,6 +8,7 @@ export type PaymentResult = {
   status?: TransactionStatus;
   providerReference: string;
   failureReason?: string;
+  statusChangedAt?: Date;
 };
 
 export interface PaymentGateway {

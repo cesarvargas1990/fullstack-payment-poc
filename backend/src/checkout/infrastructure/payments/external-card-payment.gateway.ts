@@ -5,7 +5,7 @@ import { PaymentData } from '../../domain/payment-data';
 import { PaymentGateway, PaymentResult } from '../../domain/ports/payment.gateway';
 import { Transaction, TransactionStatus } from '../../domain/transaction.entity';
 
-type WompiMerchantResponse = {
+type ExternalMerchantResponse = {
   data?: {
     presigned_acceptance?: {
       acceptance_token?: string;
@@ -16,17 +16,20 @@ type WompiMerchantResponse = {
   };
 };
 
-type WompiCardTokenResponse = {
+type ExternalCardTokenResponse = {
   data?: {
     id?: string;
   };
 };
 
-type WompiTransactionResponse = {
+type ExternalTransactionResponse = {
   data?: {
     id?: string;
+    reference?: string;
     status?: string;
     status_message?: string;
+    finalized_at?: string;
+    created_at?: string;
   };
 };
 
@@ -36,7 +39,7 @@ type AcceptanceTokens = {
 };
 
 @Injectable()
-export class WompiPaymentGateway implements PaymentGateway {
+export class ExternalCardPaymentGateway implements PaymentGateway {
   private readonly baseUrl: string;
   private readonly publicKey: string;
   private readonly privateKey: string;
@@ -45,12 +48,12 @@ export class WompiPaymentGateway implements PaymentGateway {
   private readonly pollIntervalMs: number;
 
   constructor(private readonly config: ConfigService) {
-    this.baseUrl = this.config.get<string>('WOMPI_BASE_URL') ?? 'https://api-sandbox.co.uat.wompi.dev/v1';
-    this.publicKey = this.config.get<string>('WOMPI_PUBLIC_KEY') ?? '';
-    this.privateKey = this.config.get<string>('WOMPI_PRIVATE_KEY') ?? '';
-    this.integritySecret = this.config.get<string>('WOMPI_INTEGRITY_SECRET') ?? '';
-    this.pollAttempts = Number(this.config.get<string>('WOMPI_POLL_ATTEMPTS') ?? 5);
-    this.pollIntervalMs = Number(this.config.get<string>('WOMPI_POLL_INTERVAL_MS') ?? 1000);
+    this.baseUrl = this.config.get<string>('PAYMENT_PROVIDER_BASE_URL') ?? '';
+    this.publicKey = this.config.get<string>('PAYMENT_PROVIDER_PUBLIC_KEY') ?? '';
+    this.privateKey = this.config.get<string>('PAYMENT_PROVIDER_PRIVATE_KEY') ?? '';
+    this.integritySecret = this.config.get<string>('PAYMENT_PROVIDER_INTEGRITY_SECRET') ?? '';
+    this.pollAttempts = Number(this.config.get<string>('PAYMENT_PROVIDER_POLL_ATTEMPTS') ?? 5);
+    this.pollIntervalMs = Number(this.config.get<string>('PAYMENT_PROVIDER_POLL_INTERVAL_MS') ?? 1000);
   }
 
   async pay(transaction: Transaction, paymentData: PaymentData): Promise<PaymentResult> {
@@ -70,35 +73,36 @@ export class WompiPaymentGateway implements PaymentGateway {
       signature,
     });
 
-    const providerTransaction = await this.pollTransaction(createdTransaction.id);
+    const providerTransaction = await this.pollTransaction(createdTransaction);
     const status = this.mapProviderStatus(providerTransaction.status);
 
     return {
       approved: status === 'APPROVED',
       status,
-      providerReference: providerTransaction.id,
+      providerReference: providerTransaction.reference,
       failureReason: status === 'APPROVED' ? undefined : providerTransaction.statusMessage,
+      statusChangedAt: providerTransaction.statusChangedAt,
     };
   }
 
   private assertConfigured(): void {
     const missing = [
-      ['WOMPI_PUBLIC_KEY', this.publicKey],
-      ['WOMPI_PRIVATE_KEY', this.privateKey],
-      ['WOMPI_INTEGRITY_SECRET', this.integritySecret],
+      ['PAYMENT_PROVIDER_PUBLIC_KEY', this.publicKey],
+      ['PAYMENT_PROVIDER_PRIVATE_KEY', this.privateKey],
+      ['PAYMENT_PROVIDER_INTEGRITY_SECRET', this.integritySecret],
     ]
       .filter(([, value]) => !value)
       .map(([key]) => key);
 
     if (missing.length > 0) {
       throw new InternalServerErrorException(
-        `Missing Wompi configuration: ${missing.join(', ')}`,
+        `Missing payment provider configuration: ${missing.join(', ')}`,
       );
     }
   }
 
   private async getAcceptanceTokens(): Promise<AcceptanceTokens> {
-    const response = await this.request<WompiMerchantResponse>(
+    const response = await this.request<ExternalMerchantResponse>(
       `/merchants/${this.publicKey}`,
       {
         method: 'GET',
@@ -109,14 +113,14 @@ export class WompiPaymentGateway implements PaymentGateway {
       response.data?.presigned_personal_data_auth?.acceptance_token;
 
     if (!acceptanceToken || !personalDataAcceptanceToken) {
-      throw new InternalServerErrorException('Wompi acceptance tokens were not returned');
+      throw new InternalServerErrorException('Payment provider acceptance tokens were not returned');
     }
 
     return { acceptanceToken, personalDataAcceptanceToken };
   }
 
   private async tokenizeCard(paymentData: PaymentData): Promise<string> {
-    const response = await this.request<WompiCardTokenResponse>('/tokens/cards', {
+    const response = await this.request<ExternalCardTokenResponse>('/tokens/cards', {
       method: 'POST',
       headers: this.jsonHeaders(this.publicKey),
       body: JSON.stringify({
@@ -130,7 +134,7 @@ export class WompiPaymentGateway implements PaymentGateway {
     const cardToken = response.data?.id;
 
     if (!cardToken) {
-      throw new InternalServerErrorException('Wompi card token was not returned');
+      throw new InternalServerErrorException('Payment provider card token was not returned');
     }
 
     return cardToken;
@@ -143,8 +147,8 @@ export class WompiPaymentGateway implements PaymentGateway {
     acceptanceTokens: AcceptanceTokens;
     reference: string;
     signature: string;
-  }): Promise<{ id: string }> {
-    const response = await this.request<WompiTransactionResponse>('/transactions', {
+  }): Promise<{ id: string; reference: string }> {
+    const response = await this.request<ExternalTransactionResponse>('/transactions', {
       method: 'POST',
       headers: this.jsonHeaders(this.privateKey),
       body: JSON.stringify({
@@ -166,23 +170,29 @@ export class WompiPaymentGateway implements PaymentGateway {
     const id = response.data?.id;
 
     if (!id) {
-      throw new InternalServerErrorException('Wompi transaction id was not returned');
+      throw new InternalServerErrorException('Payment provider transaction id was not returned');
     }
 
-    return { id };
+    return { id, reference: response.data?.reference ?? input.reference };
   }
 
-  private async pollTransaction(transactionId: string): Promise<{
+  private async pollTransaction(providerTransaction: {
     id: string;
+    reference: string;
+  }): Promise<{
+    id: string;
+    reference: string;
     status: string;
     statusMessage?: string;
+    statusChangedAt?: Date;
   }> {
     let lastStatus = 'PENDING';
     let lastStatusMessage: string | undefined;
+    let lastStatusChangedAt: Date | undefined;
 
     for (let attempt = 0; attempt < this.pollAttempts; attempt += 1) {
-      const response = await this.request<WompiTransactionResponse>(
-        `/transactions/${transactionId}`,
+      const response = await this.request<ExternalTransactionResponse>(
+        `/transactions/${providerTransaction.id}`,
         {
           method: 'GET',
           headers: this.jsonHeaders(this.publicKey),
@@ -190,6 +200,9 @@ export class WompiPaymentGateway implements PaymentGateway {
       );
       lastStatus = response.data?.status ?? 'ERROR';
       lastStatusMessage = response.data?.status_message;
+      lastStatusChangedAt = this.parseProviderDate(
+        response.data?.finalized_at ?? response.data?.created_at,
+      );
 
       if (lastStatus !== 'PENDING') {
         break;
@@ -201,10 +214,21 @@ export class WompiPaymentGateway implements PaymentGateway {
     }
 
     return {
-      id: transactionId,
+      id: providerTransaction.id,
+      reference: providerTransaction.reference,
       status: lastStatus,
       statusMessage: lastStatusMessage ?? lastStatus,
+      statusChangedAt: lastStatusChangedAt,
     };
+  }
+
+  private parseProviderDate(value?: string): Date | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
   }
 
   private createIntegritySignature(reference: string, transaction: Transaction): string {
@@ -237,7 +261,7 @@ export class WompiPaymentGateway implements PaymentGateway {
     if (!response.ok) {
       const body = await response.text();
       throw new InternalServerErrorException(
-        `Wompi request failed: ${response.status} ${body}`,
+        `Payment provider request failed: ${response.status} ${this.formatErrorBody(body)}`,
       );
     }
 
@@ -255,5 +279,27 @@ export class WompiPaymentGateway implements PaymentGateway {
     return new Promise(resolve => {
       setTimeout(resolve, ms);
     });
+  }
+
+  private formatErrorBody(body: string): string {
+    try {
+      const parsed = JSON.parse(body) as {
+        error?: {
+          messages?: Record<string, string[]>;
+          reason?: string;
+        };
+      };
+      const messages = parsed.error?.messages;
+
+      if (messages) {
+        return Object.entries(messages)
+          .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+          .join('; ');
+      }
+
+      return parsed.error?.reason ?? body;
+    } catch {
+      return body;
+    }
   }
 }

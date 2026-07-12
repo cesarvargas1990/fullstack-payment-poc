@@ -11,7 +11,7 @@ import { MysqlProductRepository } from './infrastructure/mysql/mysql-product.rep
 import { MysqlTransactionRepository } from './infrastructure/mysql/mysql-transaction.repository';
 import { MysqlProvider } from './infrastructure/mysql/mysql.provider';
 import { SandboxPaymentGateway } from './infrastructure/payments/sandbox-payment.gateway';
-import { WompiPaymentGateway } from './infrastructure/payments/wompi-payment.gateway';
+import { ExternalCardPaymentGateway } from './infrastructure/payments/external-card-payment.gateway';
 import { CheckoutController } from './presentation/http/checkout.controller';
 
 @Module({
@@ -23,7 +23,7 @@ import { CheckoutController } from './presentation/http/checkout.controller';
     GetTransactionUseCase,
     PayTransactionUseCase,
     SandboxPaymentGateway,
-    WompiPaymentGateway,
+    ExternalCardPaymentGateway,
     {
       provide: PRODUCT_REPOSITORY,
       useClass: MysqlProductRepository,
@@ -34,14 +34,14 @@ import { CheckoutController } from './presentation/http/checkout.controller';
     },
     {
       provide: PAYMENT_GATEWAY,
-      inject: [ConfigService, SandboxPaymentGateway, WompiPaymentGateway],
+      inject: [ConfigService, SandboxPaymentGateway, ExternalCardPaymentGateway],
       useFactory: (
         config: ConfigService,
         sandboxGateway: SandboxPaymentGateway,
-        wompiGateway: WompiPaymentGateway,
+        externalGateway: ExternalCardPaymentGateway,
       ) => {
-        return config.get<string>('PAYMENTS_MODE') === 'wompi'
-          ? wompiGateway
+        return config.get<string>('PAYMENTS_MODE') === 'external'
+          ? externalGateway
           : sandboxGateway;
       },
     },
