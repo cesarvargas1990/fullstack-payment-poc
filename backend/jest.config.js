@@ -12,5 +12,13 @@ module.exports = {
     '!src/checkout/presentation/http/dto/**/*.ts',
   ],
   coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'json-summary'],
+  coverageThreshold: {
+    global: {
+      statements: 80,
+      lines: 80,
+      functions: 80,
+    },
+  },
   testEnvironment: 'node',
 };

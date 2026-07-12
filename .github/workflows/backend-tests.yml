@@ -42,5 +42,12 @@ jobs:
       - name: Build backend
         run: npm run build
 
-      - name: Run unit tests
-        run: npm test -- --runInBand
+      - name: Run unit tests with coverage
+        run: npm run test:cov
+
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+          if-no-files-found: error
