@@ -6,3 +6,9 @@
 
 # Temporary native project used only to copy React Native templates.
 /CheckoutAppNative/
+
+# Backend local artifacts
+/backend/node_modules/
+/backend/dist/
+/backend/coverage/
+/backend/.env
