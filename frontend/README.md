@@ -1,19 +1,32 @@
-# CheckoutApp móvil
+# CheckoutApp movil
 
 Proyecto base creado con **React Native 0.86.0**, React 19.2.3, TypeScript, Hermes y la nueva arquitectura de React Native.
 
-La pantalla inicial muestra **«Hola mundo»** y está preparada para ejecutarse en el simulador de iOS.
+La pantalla inicial muestra **Hola mundo** y esta preparada para ejecutarse en
+iOS y Android.
 
-## Requisitos para iOS
+## Ubicacion del proyecto
+
+Ejecuta los comandos de React Native desde esta carpeta:
+
+```bash
+cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
+```
+
+No es necesario crear otro proyecto con `npx react-native init`. El proyecto
+nativo ya existe dentro de `frontend/ios` y `frontend/android`.
+
+## Requisitos
 
 - macOS
 - Node.js 22.11 o superior
-- Xcode con un simulador de iOS instalado
-- CocoaPods
+- Xcode con un simulador de iOS instalado, para ejecutar iOS
+- CocoaPods, para instalar dependencias nativas de iOS
+- Android Studio y Android SDK, para ejecutar Android
 
 ## Instalación
 
-Desde la carpeta `frontend`:
+Desde `frontend`:
 
 ```bash
 cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
@@ -26,15 +39,7 @@ cd ..
 
 ## Ejecutar en iOS
 
-Inicia Metro en una terminal desde `frontend`:
-
-```bash
-cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
-nvm use
-npm start
-```
-
-En otra terminal, ejecuta iOS también desde `frontend`:
+Desde `frontend`:
 
 ```bash
 cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
@@ -42,24 +47,25 @@ nvm use
 npm run ios
 ```
 
-> `npm run ios` requiere que exista `frontend/ios`. Si todavía no está
-> integrada, genera una plantilla temporal desde la raíz del repositorio (no
-> desde `frontend`):
->
-> ```bash
-> cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc
-> npx @react-native-community/cli@20.1.0 init CheckoutAppNative --version 0.86.0
-> ```
->
-> Esto crea `CheckoutAppNative/` junto a `frontend/`; después deben integrarse
-> sus proyectos nativos en `frontend`.
-
-Si Xcode abre una ventana de Metro que usa otra versión de Node, configura Node
-22 como versión predeterminada de NVM:
+`npm run ios` ejecuta `react-native run-ios` y puede iniciar Metro
+automaticamente. Si prefieres tener Metro separado, inicia primero:
 
 ```bash
-nvm alias default 22
+cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
+nvm use
+npm start
 ```
+
+Y luego, en otra terminal:
+
+```bash
+cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
+nvm use
+npm run ios
+```
+
+Tambien puedes abrir `ios/CheckoutApp.xcworkspace` en Xcode, seleccionar un
+simulador y ejecutar el esquema `CheckoutApp`.
 
 ## Ejecutar en Android
 
@@ -74,11 +80,29 @@ nvm use
 npm run android
 ```
 
-También puedes abrir `ios/CheckoutApp.xcworkspace` en Xcode, seleccionar un simulador y ejecutar el esquema `CheckoutApp`.
+## Comandos utiles
+
+Instalar pods nuevamente:
+
+```bash
+cd /Users/cesaraugustovargas/Git-projects/fullstack-payment-poc/frontend
+nvm use
+cd ios
+pod install
+cd ..
+```
+
+Configurar Node 22 como version predeterminada de NVM si Xcode abre Metro con
+otra version:
+
+```bash
+nvm alias default 22
+```
 
 ## Verificaciones
 
 ```bash
+nvm use
 npm test -- --runInBand
 npm run lint
 ```
