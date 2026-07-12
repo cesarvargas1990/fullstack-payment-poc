@@ -78,6 +78,20 @@ describe('PayTransactionUseCase', () => {
     expect(products.decreaseStock).not.toHaveBeenCalled();
   });
 
+  it('keeps transaction pending when provider result is still pending', async () => {
+    transactions.findById.mockResolvedValue(pendingTransaction);
+    payments.pay.mockResolvedValue({
+      approved: false,
+      status: 'PENDING',
+      providerReference: 'provider-tx-1',
+    });
+
+    const result = await useCase.execute(pendingTransaction.id, paymentData);
+
+    expect(result.status).toBe('PENDING');
+    expect(products.decreaseStock).not.toHaveBeenCalled();
+  });
+
   it('fails when transaction does not exist', async () => {
     transactions.findById.mockResolvedValue(null);
 

@@ -4,9 +4,17 @@ export type Transaction = {
   id: string;
   productId: string;
   quantity: number;
+  items?: Array<{
+    productId: string;
+    quantity: number;
+    amountInCents: number;
+  }>;
   amountInCents: number;
   currency: 'COP';
   status: TransactionStatus;
+  providerReference?: string;
+  failureReason?: string;
+  statusChangedAt?: Date;
   customerEmail: string;
   createdAt: Date;
   updatedAt: Date;

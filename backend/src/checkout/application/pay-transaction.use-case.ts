@@ -31,14 +31,27 @@ export class PayTransactionUseCase {
     }
 
     const payment = await this.payments.pay(transaction, paymentData);
+    const status = payment.status ?? (payment.approved ? 'APPROVED' : 'DECLINED');
     const nextTransaction: Transaction = {
       ...transaction,
-      status: payment.approved ? 'APPROVED' : 'DECLINED',
-      updatedAt: new Date(),
+      status,
+      providerReference: payment.providerReference,
+      failureReason: payment.failureReason,
+      statusChangedAt: payment.statusChangedAt ?? new Date(),
+      updatedAt: payment.statusChangedAt ?? new Date(),
     };
 
-    if (payment.approved) {
-      await this.products.decreaseStock(transaction.productId, transaction.quantity);
+    if (status === 'APPROVED') {
+      const items = transaction.items ?? [
+        {
+          productId: transaction.productId,
+          quantity: transaction.quantity,
+        },
+      ];
+
+      for (const item of items) {
+        await this.products.decreaseStock(item.productId, item.quantity);
+      }
     }
 
     return this.transactions.update(nextTransaction);

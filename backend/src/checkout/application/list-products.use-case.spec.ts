@@ -9,6 +9,7 @@ describe('ListProductsUseCase', () => {
           id: 'prod-1',
           name: 'Product',
           description: 'Test product',
+          imageUrl: 'https://example.com/product.jpg',
           priceInCents: 10000,
           currency: 'COP',
           stock: 3,

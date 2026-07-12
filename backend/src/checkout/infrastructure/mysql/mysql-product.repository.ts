@@ -8,6 +8,7 @@ type ProductRow = RowDataPacket & {
   id: string;
   name: string;
   description: string;
+  image_url: string;
   price_in_cents: number;
   currency: 'COP';
   stock: number;
@@ -49,6 +50,7 @@ export class MysqlProductRepository implements ProductRepository {
       id: row.id,
       name: row.name,
       description: row.description,
+      imageUrl: row.image_url,
       priceInCents: row.price_in_cents,
       currency: row.currency,
       stock: row.stock,
