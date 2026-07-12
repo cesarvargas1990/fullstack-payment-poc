@@ -21,20 +21,25 @@ import {
 } from '../application/productsSelectors';
 import {
   addProductToCart,
+  clearCart,
   decreaseProductQuantity,
   loadProducts,
   removeProductFromCart,
 } from '../application/productsSlice';
 import {formatCardNumber, validateCardForm} from '../domain/cardValidation';
 import {Product} from '../domain/Product';
+import {payCart} from '../infrastructure/checkoutApi';
 
 export function ProductCatalogScreen() {
-  const [activeView, setActiveView] = useState<'products' | 'cart' | 'payment'>(
-    'products',
-  );
+  const [activeView, setActiveView] = useState<
+    'products' | 'cart' | 'payment' | 'summary'
+  >('products');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
   const [cardForm, setCardForm] = useState({
     cardNumber: '',
     cardHolder: '',
+    customerEmail: '',
     expMonth: '',
     expYear: '',
     cvc: '',
@@ -84,6 +89,73 @@ export function ProductCatalogScreen() {
     cardValidation.maskedNumber,
   ]);
 
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3200);
+  };
+
+  const handleReviewPayment = () => {
+    if (!cardValidation.isValid || cardForm.cardHolder.trim().length < 2) {
+      showToast('Completa los datos validos de la tarjeta.');
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(cardForm.customerEmail.trim())) {
+      showToast('Ingresa un correo valido para crear la transaccion.');
+      return;
+    }
+
+    setActiveView('summary');
+  };
+
+  const handlePay = async () => {
+    if (cartItems.length === 0) {
+      showToast('Agrega productos al carrito antes de pagar.');
+      return;
+    }
+
+    if (!cardValidation.isValid) {
+      showToast('Los datos de la tarjeta estan incompletos o no son validos.');
+      return;
+    }
+
+    setIsPaying(true);
+
+    try {
+      const transactions = await payCart(cartItems, {
+        ...cardForm,
+        customerEmail: cardForm.customerEmail.trim(),
+      });
+      const hasDeclined = transactions.some(
+        transaction => transaction.status !== 'APPROVED',
+      );
+
+      if (hasDeclined) {
+        showToast('El pago fue rechazado. Revisa los datos e intenta de nuevo.');
+        return;
+      }
+
+      console.log('[payment-success]', {
+        transactionIds: transactions.map(transaction => transaction.id),
+        totalInCents: cartTotalInCents,
+        items: cartItemCount,
+      });
+      dispatch(clearCart());
+      setActiveView('products');
+      showToast('Pago aprobado. Transaccion completada.');
+    } catch (paymentError) {
+      console.log('[payment-error]', {
+        message:
+          paymentError instanceof Error
+            ? paymentError.message
+            : 'Unknown payment error',
+      });
+      showToast('No fue posible completar el pago.');
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
   return (
     <View style={styles.screen}>
       <View style={styles.backLayer}>
@@ -106,7 +178,9 @@ export function ProductCatalogScreen() {
                 ? 'Productos'
                 : activeView === 'cart'
                   ? 'Carrito'
-                  : 'Pago con tarjeta'}
+                  : activeView === 'payment'
+                    ? 'Pago con tarjeta'
+                    : 'Resumen del pago'}
             </Text>
             <Text style={styles.sectionMeta}>
               {activeView === 'products'
@@ -386,6 +460,20 @@ export function ProductCatalogScreen() {
                       value={cardForm.cardHolder}
                     />
 
+                    <Text style={styles.inputLabel}>Correo del comprador</Text>
+                    <TextInput
+                      accessibilityLabel="Correo del comprador"
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      onChangeText={customerEmail =>
+                        setCardForm(current => ({...current, customerEmail}))
+                      }
+                      placeholder="buyer@example.com"
+                      placeholderTextColor="#94a3b8"
+                      style={styles.input}
+                      value={cardForm.customerEmail}
+                    />
+
                     <View style={styles.inputRow}>
                       <View style={styles.inputColumn}>
                         <Text style={styles.inputLabel}>Mes</Text>
@@ -462,17 +550,78 @@ export function ProductCatalogScreen() {
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                disabled={!cardValidation.isValid}
+                onPress={handleReviewPayment}
                 style={({pressed}) => [
                   styles.payButton,
                   styles.confirmPaymentButton,
                   pressed ? styles.payButtonPressed : null,
-                  !cardValidation.isValid ? styles.payButtonDisabled : null,
                 ]}>
                 <Text style={styles.payButtonText}>Continuar</Text>
               </Pressable>
             </View>
           </>
+        ) : null}
+
+        {status === 'succeeded' && activeView === 'summary' ? (
+          <>
+            <FlatList
+              data={cartItems}
+              keyExtractor={item => item.product.id}
+              contentContainerStyle={styles.paymentContent}
+              ListHeaderComponent={
+                <View style={styles.paymentSummary}>
+                  <Text style={styles.paymentSummaryLabel}>Resumen del pago</Text>
+                  <Text style={styles.paymentSummaryTotal}>
+                    {formatMoney(cartTotalInCents, 'COP')}
+                  </Text>
+                  <Text style={styles.paymentSummaryMeta}>
+                    Se creara una transaccion PENDING y luego se procesara el pago.
+                  </Text>
+                </View>
+              }
+              renderItem={({item}) => (
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryItemName}>{item.product.name}</Text>
+                  <Text style={styles.summaryItemMeta}>
+                    {item.quantity} x{' '}
+                    {formatMoney(item.product.priceInCents, item.product.currency)}
+                  </Text>
+                </View>
+              )}
+            />
+
+            <View style={styles.checkoutBar}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isPaying}
+                onPress={() => setActiveView('payment')}
+                style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonText}>Volver</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isPaying}
+                onPress={handlePay}
+                style={({pressed}) => [
+                  styles.payButton,
+                  styles.confirmPaymentButton,
+                  pressed ? styles.payButtonPressed : null,
+                  isPaying ? styles.payButtonDisabled : null,
+                ]}>
+                <Text style={styles.payButtonText}>
+                  {isPaying ? 'Procesando...' : 'Pagar'}
+                </Text>
+              </Pressable>
+            </View>
+          </>
+        ) : null}
+
+        {toastMessage ? (
+          <View style={styles.toast}>
+            <Text accessibilityRole="alert" style={styles.toastText}>
+              {toastMessage}
+            </Text>
+          </View>
         ) : null}
       </View>
     </View>
@@ -915,6 +1064,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 6,
   },
+  summaryItem: {
+    borderBottomColor: '#e2e8f0',
+    borderBottomWidth: 1,
+    paddingVertical: 14,
+  },
+  summaryItemName: {
+    color: '#111827',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  summaryItemMeta: {
+    color: '#64748b',
+    fontSize: 13,
+    marginTop: 4,
+  },
   cardForm: {
     marginTop: 18,
   },
@@ -1098,5 +1262,22 @@ const styles = StyleSheet.create({
   },
   confirmPaymentButton: {
     flex: 1,
+  },
+  toast: {
+    alignSelf: 'center',
+    backgroundColor: '#111827',
+    borderRadius: 8,
+    bottom: 84,
+    left: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    position: 'absolute',
+    right: 20,
+  },
+  toastText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });

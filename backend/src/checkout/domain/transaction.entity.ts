@@ -7,6 +7,8 @@ export type Transaction = {
   amountInCents: number;
   currency: 'COP';
   status: TransactionStatus;
+  providerReference?: string;
+  failureReason?: string;
   customerEmail: string;
   createdAt: Date;
   updatedAt: Date;

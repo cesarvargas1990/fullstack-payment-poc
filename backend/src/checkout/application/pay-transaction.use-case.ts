@@ -31,13 +31,16 @@ export class PayTransactionUseCase {
     }
 
     const payment = await this.payments.pay(transaction, paymentData);
+    const status = payment.status ?? (payment.approved ? 'APPROVED' : 'DECLINED');
     const nextTransaction: Transaction = {
       ...transaction,
-      status: payment.approved ? 'APPROVED' : 'DECLINED',
+      status,
+      providerReference: payment.providerReference,
+      failureReason: payment.failureReason,
       updatedAt: new Date(),
     };
 
-    if (payment.approved) {
+    if (status === 'APPROVED') {
       await this.products.decreaseStock(transaction.productId, transaction.quantity);
     }
 

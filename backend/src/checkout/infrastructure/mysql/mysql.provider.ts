@@ -57,6 +57,8 @@ export class MysqlProvider implements OnModuleInit, OnModuleDestroy {
         amount_in_cents INT NOT NULL,
         currency CHAR(3) NOT NULL,
         status VARCHAR(20) NOT NULL,
+        provider_reference VARCHAR(120) NULL,
+        failure_reason VARCHAR(255) NULL,
         customer_email VARCHAR(160) NOT NULL,
         created_at TIMESTAMP NOT NULL,
         updated_at TIMESTAMP NOT NULL,
@@ -64,6 +66,13 @@ export class MysqlProvider implements OnModuleInit, OnModuleDestroy {
           FOREIGN KEY (product_id) REFERENCES products(id)
       )
     `);
+
+    await this.ensureTransactionProviderColumns();
+  }
+
+  private async ensureTransactionProviderColumns() {
+    await this.ensureColumn('transactions', 'provider_reference', 'VARCHAR(120) NULL');
+    await this.ensureColumn('transactions', 'failure_reason', 'VARCHAR(255) NULL');
   }
 
   private async seed() {
@@ -133,20 +142,23 @@ export class MysqlProvider implements OnModuleInit, OnModuleDestroy {
   }
 
   private async ensureProductImageUrlColumn() {
+    await this.ensureColumn('products', 'image_url', 'VARCHAR(500) NULL AFTER description');
+  }
+
+  private async ensureColumn(tableName: string, columnName: string, definition: string) {
     const [rows] = await this.pool.query<mysql.RowDataPacket[]>(
       `
         SELECT COLUMN_NAME
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'products'
-          AND COLUMN_NAME = 'image_url'
+          AND TABLE_NAME = ?
+          AND COLUMN_NAME = ?
       `,
+      [tableName, columnName],
     );
 
     if (rows.length === 0) {
-      await this.pool.query(
-        'ALTER TABLE products ADD COLUMN image_url VARCHAR(500) NULL AFTER description',
-      );
+      await this.pool.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
     }
   }
 }

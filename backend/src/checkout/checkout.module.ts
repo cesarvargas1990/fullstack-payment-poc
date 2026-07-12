@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CreateTransactionUseCase } from './application/create-transaction.use-case';
 import { GetTransactionUseCase } from './application/get-transaction.use-case';
 import { ListProductsUseCase } from './application/list-products.use-case';
@@ -10,6 +11,7 @@ import { MysqlProductRepository } from './infrastructure/mysql/mysql-product.rep
 import { MysqlTransactionRepository } from './infrastructure/mysql/mysql-transaction.repository';
 import { MysqlProvider } from './infrastructure/mysql/mysql.provider';
 import { SandboxPaymentGateway } from './infrastructure/payments/sandbox-payment.gateway';
+import { WompiPaymentGateway } from './infrastructure/payments/wompi-payment.gateway';
 import { CheckoutController } from './presentation/http/checkout.controller';
 
 @Module({
@@ -20,6 +22,8 @@ import { CheckoutController } from './presentation/http/checkout.controller';
     CreateTransactionUseCase,
     GetTransactionUseCase,
     PayTransactionUseCase,
+    SandboxPaymentGateway,
+    WompiPaymentGateway,
     {
       provide: PRODUCT_REPOSITORY,
       useClass: MysqlProductRepository,
@@ -30,7 +34,16 @@ import { CheckoutController } from './presentation/http/checkout.controller';
     },
     {
       provide: PAYMENT_GATEWAY,
-      useClass: SandboxPaymentGateway,
+      inject: [ConfigService, SandboxPaymentGateway, WompiPaymentGateway],
+      useFactory: (
+        config: ConfigService,
+        sandboxGateway: SandboxPaymentGateway,
+        wompiGateway: WompiPaymentGateway,
+      ) => {
+        return config.get<string>('PAYMENTS_MODE') === 'wompi'
+          ? wompiGateway
+          : sandboxGateway;
+      },
     },
   ],
 })

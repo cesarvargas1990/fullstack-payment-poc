@@ -17,6 +17,7 @@ export class SandboxPaymentGateway implements PaymentGateway {
     if (!hasCompleteData) {
       return {
         approved: false,
+        status: 'DECLINED',
         providerReference: `sandbox-${transaction.id}`,
         failureReason: 'Incomplete payment data',
       };
@@ -27,6 +28,7 @@ export class SandboxPaymentGateway implements PaymentGateway {
 
     return {
       approved,
+      status: approved ? 'APPROVED' : 'DECLINED',
       providerReference: `sandbox-${transaction.id}`,
       failureReason: approved ? undefined : 'Sandbox declined card',
     };

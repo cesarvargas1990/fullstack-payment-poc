@@ -1,10 +1,11 @@
 import { PaymentData } from '../payment-data';
-import { Transaction } from '../transaction.entity';
+import { Transaction, TransactionStatus } from '../transaction.entity';
 
 export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
 
 export type PaymentResult = {
   approved: boolean;
+  status?: TransactionStatus;
   providerReference: string;
   failureReason?: string;
 };
