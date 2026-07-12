@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Editor/workspace local files
+*.code-workspace
+
+# Temporary native project used only to copy React Native templates.
+/CheckoutAppNative/

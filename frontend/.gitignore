@@ -2,9 +2,12 @@
 #
 .DS_Store
 
-# Xcode
+# iOS / Xcode
 #
-build/
+ios/build/
+ios/DerivedData/
+ios/.xcode.env.local
+ios/Pods/
 *.pbxuser
 !default.pbxuser
 *.mode1v3
@@ -22,12 +25,16 @@ DerivedData
 *.xcuserstate
 **/.xcode.env.local
 
-# Android/IntelliJ
+# Android / Gradle / IntelliJ
 #
-build/
-.idea
-.gradle
-local.properties
+android/build/
+android/app/build/
+android/app/.cxx/
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/.idea/
+android/**/*.iml
 *.iml
 *.hprof
 .cxx/
