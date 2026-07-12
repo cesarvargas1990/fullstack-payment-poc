@@ -4,14 +4,14 @@ import {Product} from '../domain/Product';
 
 type ProductsState = {
   items: Product[];
-  selectedProductId: string | null;
+  cartItems: Record<string, number>;
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
 };
 
 const initialState: ProductsState = {
   items: [],
-  selectedProductId: null,
+  cartItems: {},
   status: 'idle',
   error: null,
 };
@@ -22,8 +22,34 @@ const productsSlice = createSlice({
   name: 'products',
   initialState,
   reducers: {
-    selectProduct(state, action: PayloadAction<string>) {
-      state.selectedProductId = action.payload;
+    addProductToCart(state, action: PayloadAction<string>) {
+      const product = state.items.find(item => item.id === action.payload);
+
+      if (!product) {
+        return;
+      }
+
+      const currentQuantity = state.cartItems[action.payload] ?? 0;
+
+      if (currentQuantity < product.stock) {
+        state.cartItems[action.payload] = currentQuantity + 1;
+      }
+    },
+    decreaseProductQuantity(state, action: PayloadAction<string>) {
+      const currentQuantity = state.cartItems[action.payload] ?? 0;
+
+      if (currentQuantity <= 1) {
+        delete state.cartItems[action.payload];
+        return;
+      }
+
+      state.cartItems[action.payload] = currentQuantity - 1;
+    },
+    removeProductFromCart(state, action: PayloadAction<string>) {
+      delete state.cartItems[action.payload];
+    },
+    clearCart(state) {
+      state.cartItems = {};
     },
   },
   extraReducers: builder => {
@@ -35,7 +61,6 @@ const productsSlice = createSlice({
       .addCase(loadProducts.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.items = action.payload;
-        state.selectedProductId = action.payload[0]?.id ?? null;
       })
       .addCase(loadProducts.rejected, (state, action) => {
         state.status = 'failed';
@@ -44,5 +69,10 @@ const productsSlice = createSlice({
   },
 });
 
-export const {selectProduct} = productsSlice.actions;
+export const {
+  addProductToCart,
+  clearCart,
+  decreaseProductQuantity,
+  removeProductFromCart,
+} = productsSlice.actions;
 export const productsReducer = productsSlice.reducer;

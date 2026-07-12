@@ -1,5 +1,15 @@
-import {selectSelectedProduct} from './productsSelectors';
-import {loadProducts, productsReducer, selectProduct} from './productsSlice';
+import {
+  selectCartItemCount,
+  selectCartItems,
+  selectCartTotalInCents,
+} from './productsSelectors';
+import {
+  addProductToCart,
+  decreaseProductQuantity,
+  loadProducts,
+  productsReducer,
+  removeProductFromCart,
+} from './productsSlice';
 
 const products = [
   {
@@ -22,6 +32,9 @@ const products = [
   },
 ];
 
+const loadedState = () =>
+  productsReducer(undefined, loadProducts.fulfilled(products, '', undefined));
+
 describe('productsSlice', () => {
   it('moves to loading state when products are requested', () => {
     const state = productsReducer(undefined, loadProducts.pending('', undefined));
@@ -30,15 +43,12 @@ describe('productsSlice', () => {
     expect(state.error).toBeNull();
   });
 
-  it('stores products and selects the first one after loading succeeds', () => {
-    const state = productsReducer(
-      undefined,
-      loadProducts.fulfilled(products, '', undefined),
-    );
+  it('stores products after loading succeeds', () => {
+    const state = loadedState();
 
     expect(state.status).toBe('succeeded');
     expect(state.items).toEqual(products);
-    expect(state.selectedProductId).toBe('prod-1');
+    expect(state.cartItems).toEqual({});
   });
 
   it('stores errors when loading fails', () => {
@@ -51,18 +61,59 @@ describe('productsSlice', () => {
     expect(state.error).toBe('Network error');
   });
 
-  it('selects a product by id', () => {
-    const loadedState = productsReducer(
-      undefined,
-      loadProducts.fulfilled(products, '', undefined),
+  it('adds product quantities to the cart', () => {
+    const state = productsReducer(
+      productsReducer(loadedState(), addProductToCart('prod-1')),
+      addProductToCart('prod-1'),
     );
-    const selectedState = productsReducer(loadedState, selectProduct('prod-2'));
 
-    expect(selectedState.selectedProductId).toBe('prod-2');
+    expect(state.cartItems).toEqual({'prod-1': 2});
     expect(
-      selectSelectedProduct({
-        products: selectedState,
+      selectCartItems({
+        products: state,
       }),
-    ).toEqual(products[1]);
+    ).toEqual([{product: products[0], quantity: 2}]);
+  });
+
+  it('does not add more items than available stock', () => {
+    const state = [addProductToCart('prod-1'), addProductToCart('prod-1'), addProductToCart('prod-1')]
+      .reduce(productsReducer, loadedState());
+
+    expect(state.cartItems).toEqual({'prod-1': 2});
+  });
+
+  it('decreases and removes product quantities', () => {
+    const withTwoItems = [addProductToCart('prod-1'), addProductToCart('prod-1')]
+      .reduce(productsReducer, loadedState());
+    const withOneItem = productsReducer(
+      withTwoItems,
+      decreaseProductQuantity('prod-1'),
+    );
+    const emptyCart = productsReducer(
+      withOneItem,
+      decreaseProductQuantity('prod-1'),
+    );
+
+    expect(withOneItem.cartItems).toEqual({'prod-1': 1});
+    expect(emptyCart.cartItems).toEqual({});
+  });
+
+  it('removes a product from the cart', () => {
+    const withItems = productsReducer(loadedState(), addProductToCart('prod-1'));
+    const state = productsReducer(withItems, removeProductFromCart('prod-1'));
+
+    expect(state.cartItems).toEqual({});
+  });
+
+  it('calculates cart count and total', () => {
+    const state = [
+      addProductToCart('prod-1'),
+      addProductToCart('prod-1'),
+      addProductToCart('prod-2'),
+    ].reduce(productsReducer, loadedState());
+    const rootState = {products: state};
+
+    expect(selectCartItemCount(rootState)).toBe(3);
+    expect(selectCartTotalInCents(rootState)).toBe(40000);
   });
 });
