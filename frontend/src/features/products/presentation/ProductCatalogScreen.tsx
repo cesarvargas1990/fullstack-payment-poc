@@ -52,7 +52,7 @@ export function ProductCatalogScreen() {
           Checkout seguro
         </Text>
         <Text style={styles.subtitle}>
-          Agrega de 1 a N articulos y continua al pago con tarjeta.
+          Agrega articulos y continua al pago con tarjeta.
         </Text>
       </View>
 
