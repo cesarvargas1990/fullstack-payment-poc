@@ -79,10 +79,18 @@ Ese archivo es local, sale de `frontend/.env` y no se versiona.
 Para desarrollo local también puedes levantar el backend desde la raíz y usar `API_BASE_URL=http://localhost:3000`:
 
 ```bash
-docker compose up --build
+docker compose --env-file backend/.env up --build
 ```
 
-La API temporal de EC2 usa HTTP. Para que iOS pueda consumirla durante la prueba técnica, `ios/CheckoutApp/Info.plist` permite cargas HTTP mediante App Transport Security. En un entorno productivo debería usarse HTTPS y restringir esta configuración.
+La API temporal de EC2 usa HTTP. Para que iOS pueda consumirla durante la prueba técnica, `ios/CheckoutApp/Info.plist` permite cargas HTTP mediante App Transport Security con una configuración genérica, sin amarrarla a un dominio específico.
+
+Si `API_BASE_URL` cambia a otro dominio o protocolo, revisa:
+
+```text
+ios/CheckoutApp/Info.plist
+```
+
+En producción se recomienda usar HTTPS y endurecer la configuración de ATS. Después de cambiar `frontend/.env`, ejecuta `npm run generate:env` y reconstruye la app iOS.
 
 La configuración está en:
 

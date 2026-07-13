@@ -53,6 +53,57 @@ describe('CreateTransactionUseCase', () => {
     );
   });
 
+  it('creates one pending transaction from multiple cart items', async () => {
+    const secondProduct = {
+      ...product,
+      id: 'prod-2',
+      priceInCents: 20000,
+      stock: 1,
+    };
+    products.findById.mockImplementation(async productId => {
+      if (productId === product.id) {
+        return product;
+      }
+
+      if (productId === secondProduct.id) {
+        return secondProduct;
+      }
+
+      return null;
+    });
+
+    const result = await useCase.execute({
+      items: [
+        {productId: product.id, quantity: 2},
+        {productId: secondProduct.id, quantity: 1},
+      ],
+      customerEmail: 'buyer@example.com',
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        productId: product.id,
+        quantity: 3,
+        amountInCents: 40000,
+        status: 'PENDING',
+      }),
+    );
+    expect(result.items).toEqual([
+      {productId: product.id, quantity: 2, amountInCents: 20000},
+      {productId: secondProduct.id, quantity: 1, amountInCents: 20000},
+    ]);
+  });
+
+  it('fails when neither legacy product fields nor cart items are provided', async () => {
+    await expect(
+      useCase.execute({
+        customerEmail: 'buyer@example.com',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(products.findById).not.toHaveBeenCalled();
+    expect(transactions.create).not.toHaveBeenCalled();
+  });
+
   it('fails when product does not exist', async () => {
     products.findById.mockResolvedValue(null);
 

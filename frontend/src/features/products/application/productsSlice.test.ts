@@ -5,6 +5,7 @@ import {
 } from './productsSelectors';
 import {
   addProductToCart,
+  clearCart,
   decreaseProductQuantity,
   loadProducts,
   productsReducer,
@@ -61,6 +62,16 @@ describe('productsSlice', () => {
     expect(state.error).toBe('Network error');
   });
 
+  it('stores Redux default rejection message when loading fails without an error', () => {
+    const state = productsReducer(
+      undefined,
+      loadProducts.rejected(null, '', undefined),
+    );
+
+    expect(state.status).toBe('failed');
+    expect(state.error).toBe('Rejected');
+  });
+
   it('adds product quantities to the cart', () => {
     const state = productsReducer(
       productsReducer(loadedState(), addProductToCart('prod-1')),
@@ -82,6 +93,22 @@ describe('productsSlice', () => {
     expect(state.cartItems).toEqual({'prod-1': 2});
   });
 
+  it('ignores unknown products when adding to the cart', () => {
+    const state = productsReducer(loadedState(), addProductToCart('missing'));
+
+    expect(state.cartItems).toEqual({});
+  });
+
+  it('keeps stock-limited product quantity when stock is zero', () => {
+    const zeroStockState = productsReducer(
+      undefined,
+      loadProducts.fulfilled([{...products[0], stock: 0}], '', undefined),
+    );
+    const state = productsReducer(zeroStockState, addProductToCart('prod-1'));
+
+    expect(state.cartItems).toEqual({});
+  });
+
   it('decreases and removes product quantities', () => {
     const withTwoItems = [addProductToCart('prod-1'), addProductToCart('prod-1')]
       .reduce(productsReducer, loadedState());
@@ -101,6 +128,13 @@ describe('productsSlice', () => {
   it('removes a product from the cart', () => {
     const withItems = productsReducer(loadedState(), addProductToCart('prod-1'));
     const state = productsReducer(withItems, removeProductFromCart('prod-1'));
+
+    expect(state.cartItems).toEqual({});
+  });
+
+  it('clears the cart', () => {
+    const withItems = productsReducer(loadedState(), addProductToCart('prod-1'));
+    const state = productsReducer(withItems, clearCart());
 
     expect(state.cartItems).toEqual({});
   });

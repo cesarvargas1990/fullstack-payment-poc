@@ -12,3 +12,5 @@
 /backend/dist/
 /backend/coverage/
 /backend/.env
+/frontend/.env
+/frontend/src/shared/config/env.ts
