@@ -27,8 +27,8 @@ jobs:
             cd ${{ secrets.EC2_APP_PATH }}
             git fetch origin main
             git reset --hard origin/main
-            docker compose up --build -d
-            docker compose ps
+            docker compose --env-file backend/.env up --build -d
+            docker compose --env-file backend/.env ps
             for attempt in $(seq 1 30); do
               if curl -fsS http://localhost:3000/products > /tmp/products-response.json; then
                 cat /tmp/products-response.json
@@ -39,7 +39,7 @@ jobs:
               sleep 2
             done
 
-            docker compose ps
+            docker compose --env-file backend/.env ps
             docker logs checkout-api --tail=100
             exit 1
  

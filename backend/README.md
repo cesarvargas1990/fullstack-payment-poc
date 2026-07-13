@@ -51,10 +51,10 @@ Variables para modo externo:
 
 ```dotenv
 PAYMENTS_MODE=external
-PAYMENT_PROVIDER_BASE_URL=https://payment-provider-sandbox.example/v1
-PAYMENT_PROVIDER_PUBLIC_KEY=pub_stagtest_xxx
-PAYMENT_PROVIDER_PRIVATE_KEY=prv_stagtest_xxx
-PAYMENT_PROVIDER_INTEGRITY_SECRET=stagtest_integrity_xxx
+PAYMENT_PROVIDER_BASE_URL=replace-with-provider-api-base-url
+PAYMENT_PROVIDER_PUBLIC_KEY=replace-with-public-key
+PAYMENT_PROVIDER_PRIVATE_KEY=replace-with-private-key
+PAYMENT_PROVIDER_INTEGRITY_SECRET=replace-with-integrity-secret
 PAYMENT_PROVIDER_POLL_ATTEMPTS=5
 PAYMENT_PROVIDER_POLL_INTERVAL_MS=1000
 ```
@@ -66,7 +66,14 @@ No se deben versionar llaves reales. `backend/.env` está ignorado por Git.
 Desde la raíz del repositorio:
 
 ```bash
-docker compose up --build
+cp backend/.env.example backend/.env
+nano backend/.env
+```
+
+Para EC2 o cualquier ambiente real, configura los valores reales en `backend/.env`. Ese archivo no se versiona. Aunque `DB_HOST` quede como `localhost`, Docker Compose lo reemplaza por `mysql` dentro del contenedor `api`.
+
+```bash
+docker compose --env-file backend/.env up --build -d
 ```
 
 API:
@@ -95,7 +102,7 @@ Si necesitas reconstruir después de cambios de código o schema:
 
 ```bash
 docker compose down
-docker compose up --build --force-recreate
+docker compose --env-file backend/.env up --build --force-recreate
 ```
 
 ## Ejecutar local

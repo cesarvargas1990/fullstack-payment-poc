@@ -32,7 +32,7 @@ Aplicación fullstack para un checkout móvil con carrito, pago con tarjeta, bac
 Desde la raíz:
 
 ```bash
-docker compose up --build
+docker compose --env-file backend/.env up --build
 ```
 
 Servicios:
@@ -42,18 +42,61 @@ API:   http://localhost:3000
 MySQL: localhost:3306
 ```
 
+## API publicada en nube
+
+La API del backend está publicada temporalmente en una instancia **AWS EC2** para validación de la prueba técnica:
+
+```text
+http://ec2-18-217-182-29.us-east-2.compute.amazonaws.com:3000
+```
+
+Endpoint de verificación:
+
+```bash
+curl http://ec2-18-217-182-29.us-east-2.compute.amazonaws.com:3000/products
+```
+
+La app móvil usa esta URL como `API_BASE_URL` en:
+
+```text
+frontend/.env
+```
+
+Ejemplo:
+
+```dotenv
+API_BASE_URL=http://ec2-18-217-182-29.us-east-2.compute.amazonaws.com:3000
+```
+
+### Nota para iOS y App Transport Security
+
+Si `API_BASE_URL` usa HTTP o un dominio nuevo, valida la configuración de App Transport Security en:
+
+```text
+frontend/ios/CheckoutApp/Info.plist
+```
+
+Para esta prueba técnica se permite tráfico HTTP durante desarrollo. En producción se recomienda exponer la API por HTTPS y restringir cualquier excepción de ATS al dominio usado por la app. Si cambias a un dominio propio o a HTTPS, actualiza `frontend/.env`, regenera la configuración con `npm run generate:env` y reconstruye la app iOS.
+
+El despliegue usa Docker Compose en EC2 con dos servicios:
+
+- `checkout-api`: backend NestJS expuesto en el puerto `3000`.
+- `checkout-mysql`: MySQL disponible solo dentro de la red Docker.
+
+
+
 Por defecto Docker usa `PAYMENTS_MODE=sandbox`, que simula pagos sin secretos.
 
 Para activar la integración real de pagos, exporta variables antes de levantar Docker:
 
 ```bash
 export PAYMENTS_MODE=external
-export PAYMENT_PROVIDER_BASE_URL=https://payment-provider-sandbox.example/v1
-export PAYMENT_PROVIDER_PUBLIC_KEY=pub_stagtest_xxx
-export PAYMENT_PROVIDER_PRIVATE_KEY=prv_stagtest_xxx
-export PAYMENT_PROVIDER_INTEGRITY_SECRET=stagtest_integrity_xxx
+export PAYMENT_PROVIDER_BASE_URL=replace-with-provider-api-base-url
+export PAYMENT_PROVIDER_PUBLIC_KEY=replace-with-public-key
+export PAYMENT_PROVIDER_PRIVATE_KEY=replace-with-private-key
+export PAYMENT_PROVIDER_INTEGRITY_SECRET=replace-with-integrity-secret
 
-docker compose up --build
+docker compose --env-file backend/.env up --build
 ```
 
 Las llaves reales no se versionan. Para desarrollo local pueden ir en `backend/.env`, que está ignorado por Git.
