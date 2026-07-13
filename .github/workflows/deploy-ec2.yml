@@ -29,4 +29,17 @@ jobs:
             git reset --hard origin/main
             docker compose up --build -d
             docker compose ps
-            curl -f http://localhost:3000/products
+            for attempt in $(seq 1 30); do
+              if curl -fsS http://localhost:3000/products > /tmp/products-response.json; then
+                cat /tmp/products-response.json
+                exit 0
+              fi
+
+              echo "Waiting for API to be ready... attempt ${attempt}/30"
+              sleep 2
+            done
+
+            docker compose ps
+            docker logs checkout-api --tail=100
+            exit 1
+ 
