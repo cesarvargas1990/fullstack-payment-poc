@@ -51,4 +51,43 @@ describe('cardValidation', () => {
     expect(result.isCvcValid).toBe(false);
     expect(result.isValid).toBe(false);
   });
+
+  it('detects unknown cards and masks short numbers safely', () => {
+    const result = validateCardForm({
+      cardNumber: '123',
+      expMonth: '12',
+      expYear: '2029',
+      cvc: '123',
+    });
+
+    expect(detectCardBrand('1234 5678')).toBe('unknown');
+    expect(result.brand).toBe('unknown');
+    expect(result.isNumberValid).toBe(false);
+    expect(result.maskedNumber).toBe('****');
+  });
+
+  it('rejects malformed expiration values and invalid months', () => {
+    expect(
+      validateCardForm({
+        cardNumber: '4242 4242 4242 4242',
+        expMonth: '1',
+        expYear: '29',
+        cvc: '123',
+      }).isExpiryValid,
+    ).toBe(false);
+    expect(
+      validateCardForm({
+        cardNumber: '4242 4242 4242 4242',
+        expMonth: '13',
+        expYear: '2029',
+        cvc: '123',
+      }).isExpiryValid,
+    ).toBe(false);
+  });
+
+  it('formats only the first sixteen card digits', () => {
+    expect(formatCardNumber('42424242424242429999')).toBe(
+      '4242 4242 4242 4242',
+    );
+  });
 });
