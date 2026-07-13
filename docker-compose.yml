@@ -4,10 +4,10 @@ services:
     container_name: checkout-mysql
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: checkout
-      MYSQL_USER: checkout
-      MYSQL_PASSWORD: checkout
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     expose:
       - "3306"
     volumes:
@@ -25,23 +25,25 @@ services:
       dockerfile: Dockerfile
     container_name: checkout-api
     restart: unless-stopped
+    env_file:
+      - backend/.env
     depends_on:
       mysql:
         condition: service_healthy
     environment:
-      PORT: 3000
+      PORT: ${PORT}
       DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER: checkout
-      DB_PASSWORD: checkout
-      DB_NAME: checkout
-      PAYMENTS_MODE: ${PAYMENTS_MODE:-sandbox}
-      PAYMENT_PROVIDER_BASE_URL: ${PAYMENT_PROVIDER_BASE_URL:-}
-      PAYMENT_PROVIDER_PUBLIC_KEY: ${PAYMENT_PROVIDER_PUBLIC_KEY:-}
-      PAYMENT_PROVIDER_PRIVATE_KEY: ${PAYMENT_PROVIDER_PRIVATE_KEY:-}
-      PAYMENT_PROVIDER_INTEGRITY_SECRET: ${PAYMENT_PROVIDER_INTEGRITY_SECRET:-}
-      PAYMENT_PROVIDER_POLL_ATTEMPTS: ${PAYMENT_PROVIDER_POLL_ATTEMPTS:-5}
-      PAYMENT_PROVIDER_POLL_INTERVAL_MS: ${PAYMENT_PROVIDER_POLL_INTERVAL_MS:-1000}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      PAYMENTS_MODE: ${PAYMENTS_MODE}
+      PAYMENT_PROVIDER_BASE_URL: ${PAYMENT_PROVIDER_BASE_URL}
+      PAYMENT_PROVIDER_PUBLIC_KEY: ${PAYMENT_PROVIDER_PUBLIC_KEY}
+      PAYMENT_PROVIDER_PRIVATE_KEY: ${PAYMENT_PROVIDER_PRIVATE_KEY}
+      PAYMENT_PROVIDER_INTEGRITY_SECRET: ${PAYMENT_PROVIDER_INTEGRITY_SECRET}
+      PAYMENT_PROVIDER_POLL_ATTEMPTS: ${PAYMENT_PROVIDER_POLL_ATTEMPTS}
+      PAYMENT_PROVIDER_POLL_INTERVAL_MS: ${PAYMENT_PROVIDER_POLL_INTERVAL_MS}
     ports:
       - "3000:3000"
 
