@@ -51,14 +51,38 @@ cd ..
 La app consume:
 
 ```text
-http://localhost:3000
+http://ec2-18-217-182-29.us-east-2.compute.amazonaws.com:3000
 ```
 
-Antes de probar checkout completo, levanta el backend desde la raíz:
+Esta URL corresponde a la API publicada temporalmente en una instancia AWS EC2 para la prueba.
+
+La URL se configura con `frontend/.env`. Crea el archivo desde el ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+Contenido para consumir la API publicada:
+
+```dotenv
+API_BASE_URL=http://ec2-18-217-182-29.us-east-2.compute.amazonaws.com:3000
+```
+
+Antes de ejecutar iOS, Android, Metro o tests, el script `npm run generate:env` crea la configuración local:
+
+```text
+src/shared/config/env.ts
+```
+
+Ese archivo es local, sale de `frontend/.env` y no se versiona.
+
+Para desarrollo local también puedes levantar el backend desde la raíz y usar `API_BASE_URL=http://localhost:3000`:
 
 ```bash
 docker compose up --build
 ```
+
+La API temporal de EC2 usa HTTP. Para que iOS pueda consumirla durante la prueba técnica, `ios/CheckoutApp/Info.plist` permite cargas HTTP mediante App Transport Security. En un entorno productivo debería usarse HTTPS y restringir esta configuración.
 
 La configuración está en:
 

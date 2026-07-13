@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate frontend environment config
+        run: npm run generate:env
+
       - name: Run TypeScript check
         run: npx tsc --noEmit
 
