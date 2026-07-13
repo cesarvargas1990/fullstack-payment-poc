@@ -8,8 +8,8 @@ services:
       MYSQL_USER: checkout
       MYSQL_PASSWORD: checkout
       MYSQL_ROOT_PASSWORD: root
-    ports:
-      - "3306:3306"
+    expose:
+      - "3306"
     volumes:
       - checkout_mysql_data:/var/lib/mysql
     healthcheck:
@@ -34,7 +34,13 @@ services:
       DB_USER: checkout
       DB_PASSWORD: checkout
       DB_NAME: checkout
-      PAYMENTS_MODE: sandbox
+      PAYMENTS_MODE: ${PAYMENTS_MODE:-sandbox}
+      PAYMENT_PROVIDER_BASE_URL: ${PAYMENT_PROVIDER_BASE_URL:-}
+      PAYMENT_PROVIDER_PUBLIC_KEY: ${PAYMENT_PROVIDER_PUBLIC_KEY:-}
+      PAYMENT_PROVIDER_PRIVATE_KEY: ${PAYMENT_PROVIDER_PRIVATE_KEY:-}
+      PAYMENT_PROVIDER_INTEGRITY_SECRET: ${PAYMENT_PROVIDER_INTEGRITY_SECRET:-}
+      PAYMENT_PROVIDER_POLL_ATTEMPTS: ${PAYMENT_PROVIDER_POLL_ATTEMPTS:-5}
+      PAYMENT_PROVIDER_POLL_INTERVAL_MS: ${PAYMENT_PROVIDER_POLL_INTERVAL_MS:-1000}
     ports:
       - "3000:3000"
 
