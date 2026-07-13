@@ -12,7 +12,8 @@ type ProductResponse = {
 };
 
 export async function fetchProducts(): Promise<Product[]> {
-  const response = await fetch(`${API_BASE_URL}/products`);
+  const url = `${API_BASE_URL}/products`;
+  const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error('No fue posible cargar los productos');

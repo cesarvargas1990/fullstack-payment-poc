@@ -83,7 +83,8 @@ async function createTransaction(body: {
   }>;
   customerEmail: string;
 }) {
-  const response = await fetch(`${API_BASE_URL}/transactions`, {
+  const url = `${API_BASE_URL}/transactions`;
+  const response = await fetch(url, {
     body: JSON.stringify(body),
     headers: {
       'Content-Type': 'application/json',
@@ -102,7 +103,10 @@ async function payTransaction(
   transactionId: string,
   paymentData: CheckoutPaymentData,
 ) {
-  const response = await fetch(`${API_BASE_URL}/transactions/${transactionId}/pay`, {
+  const url = `${API_BASE_URL}/transactions/${transactionId}/pay`;
+  console.log('[checkout-pay-transaction-request]', {url});
+
+  const response = await fetch(url, {
     body: JSON.stringify({
       cardNumber: normalizeCardNumber(paymentData.cardNumber),
       expMonth: paymentData.expMonth,

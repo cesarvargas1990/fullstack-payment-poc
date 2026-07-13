@@ -75,6 +75,22 @@ API:
 http://localhost:3000
 ```
 
+## API publicada en EC2
+
+La API también está publicada temporalmente en AWS EC2 para validación externa:
+
+```text
+http://ec2-18-217-182-29.us-east-2.compute.amazonaws.com:3000
+```
+
+Verificación:
+
+```bash
+curl http://ec2-18-217-182-29.us-east-2.compute.amazonaws.com:3000/products
+```
+
+El despliegue usa Docker Compose con el backend expuesto en el puerto `3000`.
+
 Si necesitas reconstruir después de cambios de código o schema:
 
 ```bash
@@ -106,6 +122,12 @@ Listar productos:
 
 ```bash
 curl http://localhost:3000/products
+```
+
+Contra la API publicada:
+
+```bash
+curl http://ec2-18-217-182-29.us-east-2.compute.amazonaws.com:3000/products
 ```
 
 Crear una transacción para todo el carrito:
