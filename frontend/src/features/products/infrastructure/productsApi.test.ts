@@ -1,5 +1,9 @@
 import {fetchProducts} from './productsApi';
 
+jest.mock('../../../shared/config/apiConfig', () => ({
+  API_BASE_URL: 'http://test-api.local',
+}));
+
 describe('productsApi', () => {
   const fetchMock = jest.fn();
 
@@ -26,7 +30,7 @@ describe('productsApi', () => {
     });
 
     await expect(fetchProducts()).resolves.toEqual(products);
-    expect(fetchMock).toHaveBeenCalledWith('http://localhost:3000/products');
+    expect(fetchMock).toHaveBeenCalledWith('http://test-api.local/products');
   });
 
   it('fails when backend rejects the request', async () => {

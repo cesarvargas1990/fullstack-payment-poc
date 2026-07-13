@@ -1,5 +1,9 @@
 import {CheckoutCartItem, payCart} from './checkoutApi';
 
+jest.mock('../../../shared/config/apiConfig', () => ({
+  API_BASE_URL: 'http://test-api.local',
+}));
+
 describe('checkoutApi', () => {
   const fetchMock = jest.fn();
   const cartItems: CheckoutCartItem[] = [
@@ -63,7 +67,7 @@ describe('checkoutApi', () => {
     ]);
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      'http://localhost:3000/transactions',
+      'http://test-api.local/transactions',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
@@ -74,7 +78,7 @@ describe('checkoutApi', () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
-      'http://localhost:3000/transactions/tx-1/pay',
+      'http://test-api.local/transactions/tx-1/pay',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({

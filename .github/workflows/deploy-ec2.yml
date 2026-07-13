@@ -1,0 +1,32 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/deploy-ec2.yml'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'backend/**'
+
+jobs:
+  deploy:
+    name: Deploy backend on EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy through SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.EC2_APP_PATH }}
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose up --build -d
+            docker compose ps
+            curl -f http://localhost:3000/products
