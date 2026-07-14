@@ -50,6 +50,7 @@ describe('checkoutApi', () => {
     const paidTransaction = {
       ...pendingTransaction,
       status: 'APPROVED',
+      apiTransactionId: '15113-1783887821-39126',
       providerReference: 'checkout-tx-1',
       statusChangedAt: '2026-01-01T00:00:01.000Z',
     };

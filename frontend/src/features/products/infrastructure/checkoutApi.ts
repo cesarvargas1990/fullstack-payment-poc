@@ -28,6 +28,7 @@ export type Transaction = {
   amountInCents: number;
   currency: 'COP';
   status: 'PENDING' | 'APPROVED' | 'DECLINED' | 'ERROR';
+  apiTransactionId?: string;
   providerReference?: string;
   failureReason?: string;
   customerEmail: string;
@@ -63,6 +64,7 @@ export async function payCart(
   console.log('[checkout-paid-transaction-updated]', {
     transactionId: paidTransaction.id,
     status: paidTransaction.status,
+    apiTransactionId: paidTransaction.apiTransactionId,
     providerReference: paidTransaction.providerReference,
     statusChangedAt: paidTransaction.statusChangedAt,
   });
