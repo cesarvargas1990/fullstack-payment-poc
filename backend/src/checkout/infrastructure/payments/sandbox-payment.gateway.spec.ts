@@ -26,6 +26,8 @@ describe('SandboxPaymentGateway', () => {
     });
 
     expect(result.approved).toBe(true);
+    expect(result.apiTransactionId).toBeUndefined();
+    expect(result.providerReference).toBe('sandbox-tx-1');
   });
 
   it('declines incomplete card data', async () => {
@@ -40,6 +42,7 @@ describe('SandboxPaymentGateway', () => {
     });
 
     expect(result.approved).toBe(false);
+    expect(result.apiTransactionId).toBeUndefined();
     expect(result.failureReason).toBe('Incomplete payment data');
   });
 
@@ -55,6 +58,7 @@ describe('SandboxPaymentGateway', () => {
     });
 
     expect(result.approved).toBe(false);
+    expect(result.apiTransactionId).toBeUndefined();
     expect(result.failureReason).toBe('Sandbox declined card');
   });
 });
