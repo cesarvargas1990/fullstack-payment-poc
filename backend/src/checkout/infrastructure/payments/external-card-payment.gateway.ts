@@ -79,7 +79,7 @@ export class ExternalCardPaymentGateway implements PaymentGateway {
     return {
       approved: status === 'APPROVED',
       status,
-      apiTransactionId: providerTransaction.id,
+      apiTransactionId: createdTransaction.id,
       providerReference: providerTransaction.reference,
       failureReason: status === 'APPROVED' ? undefined : providerTransaction.statusMessage,
       statusChangedAt: providerTransaction.statusChangedAt,
