@@ -154,6 +154,9 @@ export function ProductCatalogScreen() {
         references: transactions.map(
           transaction => transaction.paidTransaction.providerReference,
         ),
+        apiTransactionIds: transactions.map(
+          transaction => transaction.paidTransaction.apiTransactionId,
+        ),
         totalInCents: cartTotalInCents,
         items: cartItemCount,
       });
@@ -709,6 +712,17 @@ export function ProductCatalogScreen() {
                           : styles.transactionResultHelpFailed,
                       ]}>
                       Referencia: {paymentResults[0].paidTransaction.providerReference}
+                    </Text>
+                  ) : null}
+                  {paymentResults[0]?.paidTransaction.apiTransactionId ? (
+                    <Text
+                      style={[
+                        styles.transactionResultHelp,
+                        paymentResults[0]?.paidTransaction.status === 'APPROVED'
+                          ? null
+                          : styles.transactionResultHelpFailed,
+                      ]}>
+                      ID API: {paymentResults[0].paidTransaction.apiTransactionId}
                     </Text>
                   ) : null}
                   <Text
