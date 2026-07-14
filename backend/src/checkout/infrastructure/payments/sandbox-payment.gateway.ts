@@ -18,7 +18,6 @@ export class SandboxPaymentGateway implements PaymentGateway {
       return {
         approved: false,
         status: 'DECLINED',
-        apiTransactionId: `sandbox-${transaction.id}`,
         providerReference: `sandbox-${transaction.id}`,
         failureReason: 'Incomplete payment data',
         statusChangedAt: new Date(),
@@ -31,7 +30,6 @@ export class SandboxPaymentGateway implements PaymentGateway {
     return {
       approved,
       status: approved ? 'APPROVED' : 'DECLINED',
-      apiTransactionId: `sandbox-${transaction.id}`,
       providerReference: `sandbox-${transaction.id}`,
       failureReason: approved ? undefined : 'Sandbox declined card',
       statusChangedAt: new Date(),
