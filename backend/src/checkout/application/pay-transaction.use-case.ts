@@ -35,6 +35,7 @@ export class PayTransactionUseCase {
     const nextTransaction: Transaction = {
       ...transaction,
       status,
+      apiTransactionId: payment.apiTransactionId,
       providerReference: payment.providerReference,
       failureReason: payment.failureReason,
       statusChangedAt: payment.statusChangedAt ?? new Date(),

@@ -58,6 +58,7 @@ export class MysqlProvider implements OnModuleInit, OnModuleDestroy {
         amount_in_cents INT NOT NULL,
         currency CHAR(3) NOT NULL,
         status VARCHAR(20) NOT NULL,
+        api_transaction_id VARCHAR(120) NULL,
         provider_reference VARCHAR(120) NULL,
         failure_reason VARCHAR(255) NULL,
         status_changed_at TIMESTAMP NULL,
@@ -74,6 +75,7 @@ export class MysqlProvider implements OnModuleInit, OnModuleDestroy {
 
   private async ensureTransactionProviderColumns() {
     await this.ensureColumn('transactions', 'items_json', 'JSON NULL AFTER quantity');
+    await this.ensureColumn('transactions', 'api_transaction_id', 'VARCHAR(120) NULL');
     await this.ensureColumn('transactions', 'provider_reference', 'VARCHAR(120) NULL');
     await this.ensureColumn('transactions', 'failure_reason', 'VARCHAR(255) NULL');
     await this.ensureColumn('transactions', 'status_changed_at', 'TIMESTAMP NULL');

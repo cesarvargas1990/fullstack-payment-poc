@@ -12,6 +12,7 @@ type TransactionRow = RowDataPacket & {
   amount_in_cents: number;
   currency: 'COP';
   status: TransactionStatus;
+  api_transaction_id?: string | null;
   provider_reference?: string | null;
   failure_reason?: string | null;
   status_changed_at?: Date | null;
@@ -61,11 +62,12 @@ export class MysqlTransactionRepository implements TransactionRepository {
     await this.mysql.getPool().query(
       `
         UPDATE transactions
-        SET status = ?, provider_reference = ?, failure_reason = ?, status_changed_at = ?, updated_at = ?
+        SET status = ?, api_transaction_id = ?, provider_reference = ?, failure_reason = ?, status_changed_at = ?, updated_at = ?
         WHERE id = ?
       `,
       [
         transaction.status,
+        transaction.apiTransactionId ?? null,
         transaction.providerReference ?? null,
         transaction.failureReason ?? null,
         transaction.statusChangedAt ?? null,
@@ -86,6 +88,7 @@ export class MysqlTransactionRepository implements TransactionRepository {
       amountInCents: row.amount_in_cents,
       currency: row.currency,
       status: row.status,
+      apiTransactionId: row.api_transaction_id ?? undefined,
       providerReference: row.provider_reference ?? undefined,
       failureReason: row.failure_reason ?? undefined,
       statusChangedAt: row.status_changed_at ?? undefined,

@@ -6,6 +6,7 @@ export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');
 export type PaymentResult = {
   approved: boolean;
   status?: TransactionStatus;
+  apiTransactionId?: string;
   providerReference: string;
   failureReason?: string;
   statusChangedAt?: Date;
