@@ -25,6 +25,8 @@ Aplicación fullstack para un checkout móvil con carrito, pago con tarjeta, bac
    - se actualiza con el estado final;
    - si queda aprobada, se descuenta inventario.
 8. Pantalla final con resultado, referencia, fecha de cambio de estado y productos pagados.
+9. La transacción final se administra con Redux y se persiste cifrada mediante
+   Android Keystore/iOS Keychain. Los datos de tarjeta y el CVC nunca se persisten.
 
 ## Evidencia visual
 
@@ -186,8 +188,8 @@ Estado actual de cobertura:
 
 | Proyecto | Tests | Statements | Branches | Functions | Lines |
 |---|---:|---:|---:|---:|---:|
-| Backend | 32 passing | 100% | 88.88% | 100% | 100% |
-| Frontend | 26 passing | 96.61% | 91.66% | 94.28% | 98.19% |
+| Backend | 37 passing | 100% | 89.04% | 100% | 100% |
+| Frontend | 33 passing | 97.16% | 91.93% | 95.45% | 98.50% |
 
 El umbral configurado en Jest es 80% global para `statements`, `branches`, `lines` y `functions`.
 

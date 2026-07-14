@@ -2,7 +2,10 @@ import {Provider} from 'react-redux';
 import {StatusBar, StyleSheet} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {store} from './src/app/store';
+import {restorePaymentTransaction} from './src/features/products/application/paymentTransactionSlice';
 import {ProductCatalogScreen} from './src/features/products/presentation/ProductCatalogScreen';
+
+store.dispatch(restorePaymentTransaction());
 
 function App() {
   return (

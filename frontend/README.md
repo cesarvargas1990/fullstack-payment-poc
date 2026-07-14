@@ -2,6 +2,11 @@
 
 Aplicación móvil en **React Native 0.86.0**, React 19.2.3, TypeScript, Redux Toolkit y Hermes.
 
+La transacción de pago se conserva en Redux y se persiste cifrada usando Android
+Keystore o iOS Keychain. Solo se guardan el resultado y sus metadatos; el número
+de tarjeta, la fecha de expiración y el CVC permanecen en memoria y se eliminan
+al finalizar el flujo.
+
 Implementa el flujo de checkout:
 
 - splash screen;
@@ -172,17 +177,18 @@ npm run test:cov
 Estado actual:
 
 ```text
-Test Suites: 6 passed
-Tests: 22 passed
-Statements: 91.15%
-Branches: 77.41%
-Functions: 91.42%
-Lines: 92.45%
+Test Suites: 7 passed
+Tests: 33 passed
+Statements: 97.16%
+Branches: 91.93%
+Functions: 95.45%
+Lines: 98.50%
 ```
 
 Jest exige mínimo 80% global para:
 
 - statements
+- branches
 - lines
 - functions
 

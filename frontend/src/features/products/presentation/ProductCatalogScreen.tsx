@@ -26,9 +26,13 @@ import {
   loadProducts,
   removeProductFromCart,
 } from '../application/productsSlice';
+import {
+  clearPaymentTransaction,
+  setPaymentTransaction,
+} from '../application/paymentTransactionSlice';
 import {formatCardNumber, validateCardForm} from '../domain/cardValidation';
 import {Product} from '../domain/Product';
-import {CheckoutTransactionResult, payCart} from '../infrastructure/checkoutApi';
+import {payCart} from '../infrastructure/checkoutApi';
 
 export function ProductCatalogScreen() {
   const [activeView, setActiveView] = useState<
@@ -36,8 +40,6 @@ export function ProductCatalogScreen() {
   >('products');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
-  const [paymentResults, setPaymentResults] = useState<CheckoutTransactionResult[]>([]);
-  const [paidTotalInCents, setPaidTotalInCents] = useState(0);
   const [cardForm, setCardForm] = useState({
     cardNumber: '',
     cardHolder: '',
@@ -53,6 +55,12 @@ export function ProductCatalogScreen() {
   const cartTotalInCents = useAppSelector(selectCartTotalInCents);
   const status = useAppSelector(selectProductsStatus);
   const error = useAppSelector(selectProductsError);
+  const persistedPayment = useAppSelector(state => state.paymentTransaction.current);
+  const paymentHydrationStatus = useAppSelector(
+    state => state.paymentTransaction.hydrationStatus,
+  );
+  const paymentResults = persistedPayment ? [persistedPayment.result] : [];
+  const paidTotalInCents = persistedPayment?.paidTotalInCents ?? 0;
   const cartQuantities = Object.fromEntries(
     cartItems.map(item => [item.product.id, item.quantity]),
   );
@@ -70,6 +78,12 @@ export function ProductCatalogScreen() {
       dispatch(loadProducts());
     }
   }, [dispatch, status]);
+
+  useEffect(() => {
+    if (paymentHydrationStatus === 'succeeded' && persistedPayment) {
+      setActiveView('result');
+    }
+  }, [paymentHydrationStatus, persistedPayment]);
 
   useEffect(() => {
     if (activeView === 'payment' && cardForm.cardNumber.length > 0) {
@@ -134,8 +148,12 @@ export function ProductCatalogScreen() {
         cardHolder: cardForm.cardHolder.trim(),
         customerEmail: cardForm.customerEmail.trim(),
       });
-      setPaymentResults(transactions);
-      setPaidTotalInCents(cartTotalInCents);
+      dispatch(
+        setPaymentTransaction({
+          result: transactions[0],
+          paidTotalInCents: cartTotalInCents,
+        }),
+      );
       const hasDeclined = transactions.some(
         transaction => transaction.paidTransaction.status !== 'APPROVED',
       );
@@ -178,8 +196,7 @@ export function ProductCatalogScreen() {
 
   const handleStartNewFlow = () => {
     dispatch(clearCart());
-    setPaymentResults([]);
-    setPaidTotalInCents(0);
+    dispatch(clearPaymentTransaction());
     setCardForm({
       cardNumber: '',
       cardHolder: '',
