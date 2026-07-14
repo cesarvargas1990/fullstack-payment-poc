@@ -1,11 +1,12 @@
 import {API_BASE_URL} from '../../../shared/config/apiConfig';
 import {normalizeCardNumber} from '../domain/cardValidation';
-import {Product} from '../domain/Product';
+import {
+  CheckoutCartItem,
+  CheckoutTransactionResult,
+  Transaction,
+} from '../domain/CheckoutTransaction';
 
-export type CheckoutCartItem = {
-  product: Product;
-  quantity: number;
-};
+export type {CheckoutCartItem, CheckoutTransactionResult};
 
 export type CheckoutPaymentData = {
   cardNumber: string;
@@ -14,33 +15,6 @@ export type CheckoutPaymentData = {
   cvc: string;
   cardHolder: string;
   customerEmail: string;
-};
-
-export type Transaction = {
-  id: string;
-  productId: string;
-  quantity: number;
-  items?: Array<{
-    productId: string;
-    quantity: number;
-    amountInCents: number;
-  }>;
-  amountInCents: number;
-  currency: 'COP';
-  status: 'PENDING' | 'APPROVED' | 'DECLINED' | 'ERROR';
-  apiTransactionId?: string;
-  providerReference?: string;
-  failureReason?: string;
-  customerEmail: string;
-  createdAt: string;
-  updatedAt: string;
-  statusChangedAt?: string;
-};
-
-export type CheckoutTransactionResult = {
-  items: CheckoutCartItem[];
-  pendingTransaction: Transaction;
-  paidTransaction: Transaction;
 };
 
 export async function payCart(

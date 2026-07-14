@@ -82,6 +82,7 @@ describe('productsSlice', () => {
     expect(
       selectCartItems({
         products: state,
+        paymentTransaction: {current: null, hydrationStatus: 'idle'},
       }),
     ).toEqual([{product: products[0], quantity: 2}]);
   });
@@ -145,7 +146,10 @@ describe('productsSlice', () => {
       addProductToCart('prod-1'),
       addProductToCart('prod-2'),
     ].reduce(productsReducer, loadedState());
-    const rootState = {products: state};
+    const rootState = {
+      products: state,
+      paymentTransaction: {current: null, hydrationStatus: 'idle' as const},
+    };
 
     expect(selectCartItemCount(rootState)).toBe(3);
     expect(selectCartTotalInCents(rootState)).toBe(40000);
