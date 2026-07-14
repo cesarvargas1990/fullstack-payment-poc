@@ -28,19 +28,19 @@ Aplicación fullstack para un checkout móvil con carrito, pago con tarjeta, bac
 
 ## Evidencia visual
 
-Las capturas muestran el flujo principal de la prueba: consumo de la API externa de pagos, selección de productos, formulario de tarjeta, resumen, procesamiento y estado final.
+Las capturas muestran el flujo principal de la prueba: selección de productos, formulario de tarjeta, resumen, procesamiento, estado final y consulta de la transacción en la API externa de pagos.
 
-| Consumo de API externa de pagos | Carrito de productos |
+| Carrito de productos | Pago con tarjeta |
 |---|---|
-| ![Consulta exitosa a la API externa de pagos](docs/screenshots/01-api-products-ec2.png) | ![Carrito con productos seleccionados](docs/screenshots/02-mobile-cart-products.png) |
+| ![Carrito con productos seleccionados](docs/screenshots/01-mobile-cart-products.png) | ![Formulario de pago con tarjeta](docs/screenshots/02-mobile-card-payment.png) |
 
-| Pago con tarjeta | Resumen del pago |
+| Resumen del pago | Procesando pago |
 |---|---|
-| ![Formulario de pago con tarjeta](docs/screenshots/03-mobile-card-payment.png) | ![Resumen del pago](docs/screenshots/04-mobile-payment-summary.png) |
+| ![Resumen del pago](docs/screenshots/03-mobile-payment-summary.png) | ![Procesando pago](docs/screenshots/04-mobile-processing-payment.png) |
 
-| Procesando pago | Pago aprobado |
+| Pago aprobado | Consulta de transacción externa |
 |---|---|
-| ![Procesando pago](docs/screenshots/05-mobile-processing-payment.png) | ![Pago aprobado correctamente](docs/screenshots/06-mobile-payment-approved.png) |
+| ![Pago aprobado correctamente](docs/screenshots/05-mobile-payment-approved.png) | ![Consulta de transacción externa](docs/screenshots/06-api-transactions-sandbox.png) |
 
 ## Ejecutar todo con Docker
 
