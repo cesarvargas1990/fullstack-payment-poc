@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { CreateTransactionUseCase } from '../../application/create-transaction.use-case';
+import { GetTransactionDeliveriesUseCase } from '../../application/get-transaction-deliveries.use-case';
 import { GetTransactionUseCase } from '../../application/get-transaction.use-case';
 import { ListProductsUseCase } from '../../application/list-products.use-case';
 import { PayTransactionUseCase } from '../../application/pay-transaction.use-case';
@@ -12,6 +13,7 @@ export class CheckoutController {
     private readonly listProducts: ListProductsUseCase,
     private readonly createTransaction: CreateTransactionUseCase,
     private readonly getTransaction: GetTransactionUseCase,
+    private readonly getTransactionDeliveries: GetTransactionDeliveriesUseCase,
     private readonly payTransaction: PayTransactionUseCase,
   ) {}
 
@@ -28,6 +30,11 @@ export class CheckoutController {
   @Get('transactions/:id')
   getById(@Param('id') id: string) {
     return this.getTransaction.execute(id);
+  }
+
+  @Get('transactions/:id/deliveries')
+  getDeliveries(@Param('id') id: string) {
+    return this.getTransactionDeliveries.execute(id);
   }
 
   @Post('transactions/:id/pay')

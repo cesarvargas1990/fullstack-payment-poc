@@ -1,5 +1,6 @@
 import { CheckoutController } from './checkout.controller';
 import { CreateTransactionUseCase } from '../../application/create-transaction.use-case';
+import { GetTransactionDeliveriesUseCase } from '../../application/get-transaction-deliveries.use-case';
 import { GetTransactionUseCase } from '../../application/get-transaction.use-case';
 import { ListProductsUseCase } from '../../application/list-products.use-case';
 import { PayTransactionUseCase } from '../../application/pay-transaction.use-case';
@@ -20,6 +21,7 @@ describe('CheckoutController', () => {
   let listProducts: jest.Mocked<ListProductsUseCase>;
   let createTransaction: jest.Mocked<CreateTransactionUseCase>;
   let getTransaction: jest.Mocked<GetTransactionUseCase>;
+  let getTransactionDeliveries: jest.Mocked<GetTransactionDeliveriesUseCase>;
   let payTransaction: jest.Mocked<PayTransactionUseCase>;
   let controller: CheckoutController;
 
@@ -33,6 +35,18 @@ describe('CheckoutController', () => {
     getTransaction = {
       execute: jest.fn().mockResolvedValue(transaction),
     } as unknown as jest.Mocked<GetTransactionUseCase>;
+    getTransactionDeliveries = {
+      execute: jest.fn().mockResolvedValue([
+        {
+          id: 'delivery-1',
+          transactionId: 'tx-1',
+          productId: 'prod-1',
+          quantity: 1,
+          status: 'ASSIGNED',
+          assignedAt: new Date('2026-07-13T22:53:00.000Z'),
+        },
+      ]),
+    } as unknown as jest.Mocked<GetTransactionDeliveriesUseCase>;
     payTransaction = {
       execute: jest.fn().mockResolvedValue({ ...transaction, status: 'APPROVED' }),
     } as unknown as jest.Mocked<PayTransactionUseCase>;
@@ -41,6 +55,7 @@ describe('CheckoutController', () => {
       listProducts,
       createTransaction,
       getTransaction,
+      getTransactionDeliveries,
       payTransaction,
     );
   });
@@ -79,5 +94,17 @@ describe('CheckoutController', () => {
       status: 'APPROVED',
     });
     expect(payTransaction.execute).toHaveBeenCalledWith('tx-1', body);
+  });
+
+  it('gets transaction deliveries', async () => {
+    await expect(controller.getDeliveries('tx-1')).resolves.toEqual([
+      expect.objectContaining({
+        transactionId: 'tx-1',
+        productId: 'prod-1',
+        quantity: 1,
+        status: 'ASSIGNED',
+      }),
+    ]);
+    expect(getTransactionDeliveries.execute).toHaveBeenCalledWith('tx-1');
   });
 });
