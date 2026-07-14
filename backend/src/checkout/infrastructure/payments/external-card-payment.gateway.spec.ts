@@ -72,6 +72,7 @@ describe('ExternalCardPaymentGateway', () => {
     expect(result).toEqual({
       approved: true,
       status: 'APPROVED',
+      apiTransactionId: 'external-tx-1',
       providerReference: 'checkout-tx-1',
       failureReason: undefined,
     });
@@ -131,6 +132,7 @@ describe('ExternalCardPaymentGateway', () => {
     const result = await new ExternalCardPaymentGateway(config).pay(transaction, paymentData);
 
     expect(result.providerReference).toBe('provider-reference');
+    expect(result.apiTransactionId).toBe('external-tx-1');
     expect(result.statusChangedAt).toEqual(new Date('2026-01-01T00:00:05.000Z'));
   });
 
@@ -161,6 +163,7 @@ describe('ExternalCardPaymentGateway', () => {
     expect(result).toEqual({
       approved: false,
       status: 'DECLINED',
+      apiTransactionId: 'external-tx-1',
       providerReference: 'checkout-tx-1',
       failureReason: 'Insufficient funds',
     });

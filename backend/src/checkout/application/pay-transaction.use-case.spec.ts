@@ -52,6 +52,7 @@ describe('PayTransactionUseCase', () => {
     transactions.findById.mockResolvedValue(pendingTransaction);
     payments.pay.mockResolvedValue({
       approved: true,
+      apiTransactionId: 'external-tx-1',
       providerReference: 'sandbox-tx-1',
     });
 
@@ -60,7 +61,11 @@ describe('PayTransactionUseCase', () => {
     expect(result.status).toBe('APPROVED');
     expect(products.decreaseStock).toHaveBeenCalledWith('prod-1', 1);
     expect(transactions.update).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'tx-1', status: 'APPROVED' }),
+      expect.objectContaining({
+        id: 'tx-1',
+        status: 'APPROVED',
+        apiTransactionId: 'external-tx-1',
+      }),
     );
   });
 

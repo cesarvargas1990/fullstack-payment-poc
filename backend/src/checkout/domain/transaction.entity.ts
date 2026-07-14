@@ -12,6 +12,7 @@ export type Transaction = {
   amountInCents: number;
   currency: 'COP';
   status: TransactionStatus;
+  apiTransactionId?: string;
   providerReference?: string;
   failureReason?: string;
   statusChangedAt?: Date;

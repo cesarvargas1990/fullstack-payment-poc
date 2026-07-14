@@ -187,7 +187,7 @@ Estado actual de cobertura:
 | Proyecto | Tests | Statements | Branches | Functions | Lines |
 |---|---:|---:|---:|---:|---:|
 | Backend | 32 passing | 100% | 88.88% | 100% | 100% |
-| Frontend | 29 passing | 96.61% | 91.66% | 94.28% | 98.19% |
+| Frontend | 26 passing | 96.61% | 91.66% | 94.28% | 98.19% |
 
 El umbral configurado en Jest es 80% global para `statements`, `branches`, `lines` y `functions`.
 
