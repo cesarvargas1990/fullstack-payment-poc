@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { DeliveryRepository } from '../domain/ports/delivery.repository';
 import { PaymentGateway } from '../domain/ports/payment.gateway';
 import { ProductRepository } from '../domain/ports/product.repository';
 import { TransactionRepository } from '../domain/ports/transaction.repository';
@@ -28,6 +29,7 @@ describe('PayTransactionUseCase', () => {
 
   let transactions: jest.Mocked<TransactionRepository>;
   let products: jest.Mocked<ProductRepository>;
+  let deliveries: jest.Mocked<DeliveryRepository>;
   let payments: jest.Mocked<PaymentGateway>;
   let useCase: PayTransactionUseCase;
 
@@ -42,13 +44,17 @@ describe('PayTransactionUseCase', () => {
       findById: jest.fn(),
       decreaseStock: jest.fn(),
     };
+    deliveries = {
+      assignProducts: jest.fn(),
+      findByTransactionId: jest.fn(),
+    };
     payments = {
       pay: jest.fn(),
     };
-    useCase = new PayTransactionUseCase(transactions, products, payments);
+    useCase = new PayTransactionUseCase(transactions, products, deliveries, payments);
   });
 
-  it('approves a pending transaction and decreases stock', async () => {
+  it('approves a pending transaction, decreases stock and assigns delivery', async () => {
     transactions.findById.mockResolvedValue(pendingTransaction);
     payments.pay.mockResolvedValue({
       approved: true,
@@ -60,6 +66,15 @@ describe('PayTransactionUseCase', () => {
 
     expect(result.status).toBe('APPROVED');
     expect(products.decreaseStock).toHaveBeenCalledWith('prod-1', 1);
+    expect(deliveries.assignProducts).toHaveBeenCalledWith({
+      transactionId: 'tx-1',
+      items: [
+        {
+          productId: 'prod-1',
+          quantity: 1,
+        },
+      ],
+    });
     expect(transactions.update).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'tx-1',
@@ -81,6 +96,7 @@ describe('PayTransactionUseCase', () => {
 
     expect(result.status).toBe('DECLINED');
     expect(products.decreaseStock).not.toHaveBeenCalled();
+    expect(deliveries.assignProducts).not.toHaveBeenCalled();
   });
 
   it('keeps transaction pending when provider result is still pending', async () => {
@@ -95,6 +111,64 @@ describe('PayTransactionUseCase', () => {
 
     expect(result.status).toBe('PENDING');
     expect(products.decreaseStock).not.toHaveBeenCalled();
+    expect(deliveries.assignProducts).not.toHaveBeenCalled();
+  });
+
+  it('assigns every cart item when payment is approved', async () => {
+    transactions.findById.mockResolvedValue({
+      ...pendingTransaction,
+      items: [
+        {
+          productId: 'prod-1',
+          quantity: 1,
+          amountInCents: 10000,
+        },
+        {
+          productId: 'prod-2',
+          quantity: 2,
+          amountInCents: 20000,
+        },
+      ],
+    });
+    payments.pay.mockResolvedValue({
+      approved: true,
+      apiTransactionId: 'external-tx-1',
+      providerReference: 'sandbox-tx-1',
+    });
+
+    await useCase.execute(pendingTransaction.id, paymentData);
+
+    expect(products.decreaseStock).toHaveBeenCalledWith('prod-1', 1);
+    expect(products.decreaseStock).toHaveBeenCalledWith('prod-2', 2);
+    expect(deliveries.assignProducts).toHaveBeenCalledWith({
+      transactionId: 'tx-1',
+      items: [
+        {
+          productId: 'prod-1',
+          quantity: 1,
+        },
+        {
+          productId: 'prod-2',
+          quantity: 2,
+        },
+      ],
+    });
+  });
+
+  it('does not assign delivery when stock update fails', async () => {
+    transactions.findById.mockResolvedValue(pendingTransaction);
+    products.decreaseStock.mockRejectedValue(new Error('Insufficient stock'));
+    payments.pay.mockResolvedValue({
+      approved: true,
+      apiTransactionId: 'external-tx-1',
+      providerReference: 'sandbox-tx-1',
+    });
+
+    await expect(useCase.execute(pendingTransaction.id, paymentData)).rejects.toThrow(
+      'Insufficient stock',
+    );
+    expect(deliveries.assignProducts).not.toHaveBeenCalled();
+    expect(transactions.update).not.toHaveBeenCalled();
   });
 
   it('fails when transaction does not exist', async () => {

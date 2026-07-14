@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PaymentData } from '../domain/payment-data';
+import { DELIVERY_REPOSITORY, DeliveryRepository } from '../domain/ports/delivery.repository';
 import { PAYMENT_GATEWAY, PaymentGateway } from '../domain/ports/payment.gateway';
 import { PRODUCT_REPOSITORY, ProductRepository } from '../domain/ports/product.repository';
 import {
@@ -15,6 +16,8 @@ export class PayTransactionUseCase {
     private readonly transactions: TransactionRepository,
     @Inject(PRODUCT_REPOSITORY)
     private readonly products: ProductRepository,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveries: DeliveryRepository,
     @Inject(PAYMENT_GATEWAY)
     private readonly payments: PaymentGateway,
   ) {}
@@ -53,6 +56,14 @@ export class PayTransactionUseCase {
       for (const item of items) {
         await this.products.decreaseStock(item.productId, item.quantity);
       }
+
+      await this.deliveries.assignProducts({
+        transactionId: transaction.id,
+        items: items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+      });
     }
 
     return this.transactions.update(nextTransaction);

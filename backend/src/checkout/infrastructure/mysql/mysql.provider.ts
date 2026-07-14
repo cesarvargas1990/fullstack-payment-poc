@@ -71,6 +71,21 @@ export class MysqlProvider implements OnModuleInit, OnModuleDestroy {
     `);
 
     await this.ensureTransactionProviderColumns();
+
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS transaction_deliveries (
+        id VARCHAR(36) PRIMARY KEY,
+        transaction_id VARCHAR(36) NOT NULL,
+        product_id VARCHAR(36) NOT NULL,
+        quantity INT NOT NULL,
+        status VARCHAR(20) NOT NULL,
+        assigned_at TIMESTAMP NOT NULL,
+        CONSTRAINT fk_transaction_deliveries_transaction
+          FOREIGN KEY (transaction_id) REFERENCES transactions(id),
+        CONSTRAINT fk_transaction_deliveries_product
+          FOREIGN KEY (product_id) REFERENCES products(id)
+      )
+    `);
   }
 
   private async ensureTransactionProviderColumns() {
