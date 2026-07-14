@@ -155,7 +155,7 @@ describe('PayTransactionUseCase', () => {
     });
   });
 
-  it('does not assign delivery when stock update fails', async () => {
+  it('persists the payment result before updating stock and assigning delivery', async () => {
     transactions.findById.mockResolvedValue(pendingTransaction);
     products.decreaseStock.mockRejectedValue(new Error('Insufficient stock'));
     payments.pay.mockResolvedValue({
@@ -168,7 +168,13 @@ describe('PayTransactionUseCase', () => {
       'Insufficient stock',
     );
     expect(deliveries.assignProducts).not.toHaveBeenCalled();
-    expect(transactions.update).not.toHaveBeenCalled();
+    expect(transactions.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'tx-1',
+        status: 'APPROVED',
+        apiTransactionId: 'external-tx-1',
+      }),
+    );
   });
 
   it('fails when transaction does not exist', async () => {

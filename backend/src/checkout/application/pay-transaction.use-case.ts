@@ -45,6 +45,8 @@ export class PayTransactionUseCase {
       updatedAt: payment.statusChangedAt ?? new Date(),
     };
 
+    const updatedTransaction = await this.transactions.update(nextTransaction);
+
     if (status === 'APPROVED') {
       const items = transaction.items ?? [
         {
@@ -66,6 +68,6 @@ export class PayTransactionUseCase {
       });
     }
 
-    return this.transactions.update(nextTransaction);
+    return updatedTransaction;
   }
 }
