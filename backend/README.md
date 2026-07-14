@@ -204,7 +204,8 @@ curl http://localhost:3000/transactions/TRANSACTION_ID
 Campos relevantes:
 
 - `status`: `PENDING`, `APPROVED`, `DECLINED` o `ERROR`.
-- `providerReference`: referencia externa de la operación.
+- `apiTransactionId`: identificador externo de la transacción de pago. Corresponde a `data.id` en la respuesta de la API externa y permite consultar luego `/transactions/{apiTransactionId}` en ese proveedor.
+- `providerReference`: referencia externa de checkout. Corresponde a `data.reference`.
 - `statusChangedAt`: fecha de cambio de estado. Usa la fecha de finalización del proveedor cuando está disponible.
 
 ## Flujo de pago
